@@ -44,6 +44,7 @@ export function Select<T extends string>({
   const [active, setActive] = useState(0);
   const [placement, setPlacement] = useState<'below' | 'above'>('below');
   const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const typeahead = useRef({ text: '', at: 0 });
 
@@ -52,7 +53,9 @@ export function Select<T extends string>({
 
   const openList = () => {
     if (disabled || options.length === 0) return;
-    setActive(Math.max(0, selectedIndex));
+    // With no value (e.g. an "add" picker) nothing is highlighted, so Tab or Enter
+    // cannot pick the first option by accident.
+    setActive(selectedIndex);
     setOpen(true);
     sounds.open();
   };
@@ -64,7 +67,10 @@ export function Select<T extends string>({
 
   const commit = (index: number) => {
     const option = options[index];
-    if (!option) return;
+    if (!option) {
+      closeList();
+      return;
+    }
     setOpen(false);
     if (option.id !== value) onChange(option.id);
     sounds.select();
@@ -101,9 +107,33 @@ export function Select<T extends string>({
     setActive(next);
   };
 
+  const findTyped = (key: string) => {
+    const now = Date.now();
+    const state = typeahead.current;
+    state.text = now - state.at > TYPEAHEAD_RESET_MS ? key.toLowerCase() : state.text + key.toLowerCase();
+    state.at = now;
+    const start = state.text.length === 1 ? active + 1 : Math.max(0, active);
+    for (let offset = 0; offset < options.length; offset += 1) {
+      const index = (start + offset) % options.length;
+      if (options[index].label.toLowerCase().startsWith(state.text)) {
+        move(index);
+        break;
+      }
+    }
+  };
+
+  const typing = () =>
+    typeahead.current.text !== '' && Date.now() - typeahead.current.at <= TYPEAHEAD_RESET_MS;
+
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (disabled) return;
     const { key } = event;
+    if (open && key === ' ' && typing()) {
+      // A space inside a typeahead search ("Black marble") extends the search.
+      event.preventDefault();
+      findTyped(key);
+      return;
+    }
     if (!open) {
       if (['ArrowDown', 'ArrowUp', 'Enter', ' ', 'Home', 'End'].includes(key)) {
         event.preventDefault();
@@ -155,20 +185,7 @@ export function Select<T extends string>({
         closeList();
         return;
     }
-    if (key.length === 1 && !event.ctrlKey && !event.metaKey) {
-      const now = Date.now();
-      const state = typeahead.current;
-      state.text = now - state.at > TYPEAHEAD_RESET_MS ? key.toLowerCase() : state.text + key.toLowerCase();
-      state.at = now;
-      const start = state.text.length === 1 ? active + 1 : active;
-      for (let offset = 0; offset < options.length; offset += 1) {
-        const index = (start + offset) % options.length;
-        if (options[index].label.toLowerCase().startsWith(state.text)) {
-          move(index);
-          break;
-        }
-      }
-    }
+    if (key.length === 1 && !event.ctrlKey && !event.metaKey) findTyped(key);
   };
 
   return (
@@ -179,6 +196,7 @@ export function Select<T extends string>({
       data-placement={placement}
     >
       <button
+        ref={buttonRef}
         id={buttonId}
         type="button"
         className="select-button"
@@ -186,7 +204,7 @@ export function Select<T extends string>({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
-        aria-activedescendant={open ? `${listId}-${active}` : undefined}
+        aria-activedescendant={open && active >= 0 ? `${listId}-${active}` : undefined}
         aria-label={ariaLabel}
         disabled={disabled}
         onPointerEnter={() => sounds.hover()}
@@ -207,6 +225,10 @@ export function Select<T extends string>({
         aria-labelledby={buttonId}
         hidden={!open}
         tabIndex={-1}
+        // Keep focus (and so the keyboard) on the button when an option, the list padding
+        // or its scrollbar is pressed; a focused list would also let Escape reach the drawer.
+        onMouseDown={(event) => event.preventDefault()}
+        onFocus={() => buttonRef.current?.focus()}
       >
         {options.map((option, index) => (
           <li
@@ -218,8 +240,6 @@ export function Select<T extends string>({
             data-active={index === active ? 'true' : 'false'}
             title={option.description}
             onPointerMove={() => index !== active && move(index)}
-            // Keep focus on the button so the listbox does not blur-close before the click lands.
-            onPointerDown={(event) => event.preventDefault()}
             onClick={() => commit(index)}
           >
             <span>{option.label}</span>
