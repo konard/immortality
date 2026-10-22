@@ -848,6 +848,30 @@ export const PRESETS: readonly Preset[] = [
   ),
 ];
 
+/**
+ * Applies a shared look (share link or preset) over the viewer's settings while keeping
+ * their personal comfort choices: motion and audio are never switched back on by a link.
+ */
+export function applySharedLook(current: UiSettings, look: UiSettings): UiSettings {
+  return {
+    ...look,
+    effects: { ...look.effects },
+    animations: current.animations,
+    sound: current.sound,
+    volume: current.volume,
+  };
+}
+
+/** Applies a preset; comfort settings are kept, but a silent preset (Quiet) still mutes. */
+export function applyPreset(preset: Preset, current: UiSettings): UiSettings {
+  return { ...applySharedLook(current, preset.settings), sound: current.sound && preset.settings.sound };
+}
+
+/** Whether `current` is exactly what applying `preset` would produce. */
+export function isPresetActive(preset: Preset, current: UiSettings): boolean {
+  return JSON.stringify(applyPreset(preset, current)) === JSON.stringify(current);
+}
+
 /** Number of distinct settings values that differ from the defaults. */
 export function countCustomized(settings: UiSettings): number {
   const diff = diffFromDefaults(settings);

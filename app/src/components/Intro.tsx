@@ -35,14 +35,38 @@ export function Intro({ mode, speed, animate, onDone, onAnswer }: IntroProps) {
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
   const leavingRef = useRef(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const finishTimer = useRef<number>();
 
   // Idempotent: timers, clicks and key presses may all race to close the intro.
   const finish = () => {
     if (leavingRef.current) return;
     leavingRef.current = true;
     setLeaving(true);
-    window.setTimeout(() => doneRef.current(), animate ? 260 * scale : 0);
+    finishTimer.current = window.setTimeout(() => doneRef.current(), animate ? 260 * scale : 0);
   };
+
+  // A real modal: everything behind the intro is inert until it closes, then focus
+  // returns to where it was (when that element still exists).
+  useEffect(() => {
+    const previous = document.activeElement;
+    const root = rootRef.current;
+    const siblings = root?.parentElement
+      ? Array.from(root.parentElement.children).filter(
+          (element): element is HTMLElement =>
+            element !== root && element instanceof HTMLElement && !element.inert
+        )
+      : [];
+    for (const element of siblings) element.inert = true;
+    root?.focus();
+    return () => {
+      window.clearTimeout(finishTimer.current);
+      for (const element of siblings) element.inert = false;
+      if (previous instanceof HTMLElement && previous !== document.body && previous.isConnected) {
+        previous.focus();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (mode === 'boot') {
@@ -81,6 +105,8 @@ export function Intro({ mode, speed, animate, onDone, onAnswer }: IntroProps) {
 
   return (
     <div
+      ref={rootRef}
+      tabIndex={-1}
       className={`intro intro--${mode}${leaving ? ' is-leaving' : ''}`}
       role="dialog"
       aria-modal="true"

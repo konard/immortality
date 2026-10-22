@@ -6,11 +6,12 @@ import {
   SETTING_GROUPS,
   SOUND_EVENTS,
   SOUND_PRESETS,
+  applyPreset,
   countCustomized,
   encodeShareHash,
+  isPresetActive,
   randomizeSettings,
   type Axis,
-  type Preset,
   type ReferenceId,
   type SettingGroupId,
   type SoundEventId,
@@ -27,16 +28,6 @@ interface SettingsPanelProps {
   onReset: () => void;
   onPlayIntro?: () => void;
 }
-
-/** Comfort settings a preset never overrides. */
-const applyPreset = (preset: Preset, current: UiSettings): UiSettings => ({
-  ...preset.settings,
-  animations: current.animations,
-  volume: current.volume,
-});
-
-const isPresetActive = (preset: Preset, current: UiSettings) =>
-  JSON.stringify(applyPreset(preset, current)) === JSON.stringify(current);
 
 function SourceLinks({ sources }: { sources?: readonly ReferenceId[] }) {
   if (!sources || sources.length === 0) return null;

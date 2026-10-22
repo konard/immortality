@@ -32,6 +32,7 @@ import { UiSettingsContext, motionAllowed } from './uiContext';
 import {
   DEFAULT_SETTINGS,
   SETTINGS_STORAGE_KEY,
+  applySharedLook,
   decodeShareHash,
   parseStoredSettings,
   type UiSettings,
@@ -43,14 +44,16 @@ const inRange = (points: Point[], fromYear: number) => points.filter((p) => p.ye
 
 const initialSettings = (): UiSettings => {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS;
-  // A shared `#ui=` link wins over the saved preference (and is then saved).
-  const shared = decodeShareHash(window.location.hash);
-  if (shared) return shared;
+  let stored = DEFAULT_SETTINGS;
   try {
-    return parseStoredSettings(window.localStorage.getItem(SETTINGS_STORAGE_KEY));
+    stored = parseStoredSettings(window.localStorage.getItem(SETTINGS_STORAGE_KEY));
   } catch {
-    return DEFAULT_SETTINGS;
+    // Storage may be disabled; fall back to the defaults.
   }
+  // A shared `#ui=` link wins over the saved look (and is then saved), but never over
+  // the viewer's own motion and audio preferences.
+  const shared = decodeShareHash(window.location.hash);
+  return shared ? applySharedLook(stored, shared) : stored;
 };
 
 /**
@@ -118,6 +121,7 @@ export default function App() {
   // The intro plays once per page load (and on demand from the settings drawer).
   const [introVisible, setIntroVisible] = useState(() => uiSettings.intro !== 'none');
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
+  const introReplayed = useRef(false);
 
   const closeSettings = useCallback(() => {
     setSettingsOpen(false);
@@ -144,7 +148,7 @@ export default function App() {
     const onHashChange = () => {
       const shared = decodeShareHash(window.location.hash);
       if (!shared) return;
-      setUiSettings(shared);
+      setUiSettings((current) => applySharedLook(current, shared));
       dropShareHash();
     };
     window.addEventListener('hashchange', onHashChange);
@@ -453,6 +457,7 @@ export default function App() {
           sounds.select();
         }}
         onPlayIntro={() => {
+          introReplayed.current = true;
           setSettingsOpen(false);
           setIntroVisible(true);
         }}
@@ -463,7 +468,13 @@ export default function App() {
           speed={uiSettings.animationSpeed}
           animate={motionAllowed(uiSettings)}
           onAnswer={(soundOn) => setUiSettings((current) => ({ ...current, sound: soundOn }))}
-          onDone={() => setIntroVisible(false)}
+          onDone={() => {
+            setIntroVisible(false);
+            // Replayed from the (now closed) drawer: the trigger is gone, so land on its toggle.
+            if (!introReplayed.current) return;
+            introReplayed.current = false;
+            requestAnimationFrame(() => settingsButtonRef.current?.focus());
+          }}
         />
       )}
     </Shell>

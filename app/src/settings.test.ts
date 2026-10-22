@@ -9,10 +9,13 @@ import {
   SETTING_GROUPS,
   SOUND_EVENTS,
   SOUND_PRESETS,
+  applyPreset,
+  applySharedLook,
   countCustomized,
   decodeShareHash,
   diffFromDefaults,
   encodeShareHash,
+  isPresetActive,
   parseStoredSettings,
   randomizeSettings,
   type UiSettings,
@@ -166,6 +169,20 @@ describe('presets', () => {
     expect(new Set(fingerprints).size).toBe(PRESETS.length);
   });
 
+  it('keeps comfort settings when applied, but a silent preset still mutes', () => {
+    const viewer: UiSettings = { ...DEFAULT_SETTINGS, animations: false, sound: false, volume: 25 };
+    for (const preset of PRESETS) {
+      const next = applyPreset(preset, viewer);
+      expect(next).toMatchObject({ animations: false, sound: false, volume: 25 });
+      expect(isPresetActive(preset, next)).toBe(true);
+    }
+    const listening: UiSettings = { ...DEFAULT_SETTINGS, sound: true };
+    const quiet = PRESETS.find(({ id }) => id === 'minimal')!;
+    expect(applyPreset(quiet, listening).sound).toBe(false);
+    const grid = PRESETS.find(({ id }) => id === 'grid')!;
+    expect(applyPreset(grid, listening).sound).toBe(true);
+  });
+
   it('covers every requested reference with a dedicated preset', () => {
     const covered = new Set(PRESETS.flatMap(({ sources }) => sources));
     for (const source of ['gridcn', 'arwes', 'romel', 'soulextract', 'glitchy', 'zknet'] as const) {
@@ -190,6 +207,15 @@ describe('share links and randomizer', () => {
     };
     expect(diffFromDefaults(custom)).toEqual({ glow: 'heavy', effects: { hover: 'pulse' } });
     expect(countCustomized(custom)).toBe(2);
+  });
+
+  it('applies a shared look without overriding the viewer motion and audio choices', () => {
+    const sender: UiSettings = { ...DEFAULT_SETTINGS, palette: 'ares', sound: true, volume: 100 };
+    const viewer: UiSettings = { ...DEFAULT_SETTINGS, animations: false, sound: false, volume: 10 };
+    const shared = decodeShareHash(encodeShareHash(sender))!;
+    const applied = applySharedLook(viewer, shared);
+    expect(applied.palette).toBe('ares');
+    expect(applied).toMatchObject({ animations: false, sound: false, volume: 10 });
   });
 
   it('ignores unrelated or malformed hashes', () => {

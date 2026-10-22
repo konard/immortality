@@ -29,3 +29,14 @@ describe('stylesheet coverage', () => {
     expect(unstyled).toEqual([]);
   });
 });
+
+describe('motion off', () => {
+  it('cancels animation delays so staggered panels are not left invisible', () => {
+    const motionOff = css.slice(css.indexOf('.motion-off *,'));
+    const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
+    for (const block of [motionOff, reduced]) {
+      const rule = block.slice(0, block.indexOf('}'));
+      expect(rule).toContain('animation-delay: 0s !important');
+    }
+  });
+});

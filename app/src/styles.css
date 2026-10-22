@@ -982,6 +982,8 @@ table.data-table {
 .motion-off *::after {
   scroll-behavior: auto !important;
   animation-duration: 0.001ms !important;
+  /* Staggered entrances would otherwise stay hidden for their whole delay. */
+  animation-delay: 0s !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.001ms !important;
 }
@@ -992,6 +994,7 @@ table.data-table {
   *::after {
     scroll-behavior: auto !important;
     animation-duration: 0.001ms !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
@@ -2048,6 +2051,10 @@ table.data-table {
     linear-gradient(var(--neon-faint) 1px, transparent 1px) 0 0 / 100% 4px,
     color-mix(in srgb, var(--page) 94%, transparent);
   animation: entrance-fade calc(240ms * var(--motion-scale, 1)) ease-out both;
+}
+
+.intro:focus {
+  outline: none;
 }
 
 .intro.is-leaving {
