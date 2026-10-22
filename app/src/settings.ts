@@ -14,6 +14,10 @@ export const REFERENCES = {
     label: 'Arwes frames',
     url: 'https://github.com/arwes/arwes/tree/bdbaa0324900ee978d42036d1304a053c1fe54b5/packages/frames',
   },
+  arwesStyles: {
+    label: 'Arwes styles',
+    url: 'https://github.com/arwes/arwes/tree/bdbaa0324900ee978d42036d1304a053c1fe54b5/packages/styles/src',
+  },
   arwesText: {
     label: 'Arwes text',
     url: 'https://github.com/arwes/arwes/tree/bdbaa0324900ee978d42036d1304a053c1fe54b5/packages/text',
@@ -239,6 +243,19 @@ export const TITLE_STYLES = [
   { id: 'slash', label: 'Slashes', description: 'A // marker before the title.', source: 'soulextractSource' },
 ] as const satisfies readonly OptionDef[];
 
+export const DIVIDERS = [
+  { id: 'none', label: 'Spacing' },
+  { id: 'line', label: 'Hairline', description: 'A thin fading line between paragraphs.' },
+  {
+    id: 'separator',
+    label: 'Separator',
+    description: 'A rule with bright end segments (styleSeparator).',
+    source: 'arwesStyles',
+  },
+  { id: 'steps', label: 'Steps', description: 'A short run of stepped bars (styleSteps).', source: 'arwesStyles' },
+  { id: 'strip', label: 'Hazard strip', description: 'Diagonal warning stripes (styleStrip).', source: 'arwesStyles' },
+] as const satisfies readonly OptionDef[];
+
 export const TEXT_EFFECTS = [
   { id: 'none', label: 'None' },
   { id: 'decipher', label: 'Decipher', description: 'Random glyphs resolve into text.', source: 'arwesText' },
@@ -399,6 +416,7 @@ export type MeterStyleId = (typeof METER_STYLES)[number]['id'];
 export type FontId = (typeof FONTS)[number]['id'];
 export type HeadingCaseId = (typeof HEADING_CASES)[number]['id'];
 export type TitleStyleId = (typeof TITLE_STYLES)[number]['id'];
+export type DividerId = (typeof DIVIDERS)[number]['id'];
 export type TextEffectId = (typeof TEXT_EFFECTS)[number]['id'];
 export type ScanlineId = (typeof SCANLINE_LEVELS)[number]['id'];
 export type IntroId = (typeof INTROS)[number]['id'];
@@ -438,6 +456,7 @@ export interface UiSettings {
   fontScale: number;
   headingCase: HeadingCaseId;
   titleStyle: TitleStyleId;
+  divider: DividerId;
   textEffect: TextEffectId;
   // Scene
   background: BackgroundId;
@@ -505,6 +524,7 @@ export const DEFAULT_SETTINGS: UiSettings = {
   fontScale: 100,
   headingCase: 'upper',
   titleStyle: 'plain',
+  divider: 'none',
   textEffect: 'sequence',
   background: 'perspective-grid',
   backdropGradient: 'none',
@@ -769,6 +789,15 @@ export const AXES: readonly Axis[] = [
     options: TITLE_STYLES,
     display: 'buttons',
     sources: ['arwesFrames', 'zknet', 'soulextractSource'],
+  },
+  {
+    key: 'divider',
+    kind: 'choice',
+    label: 'Section dividers',
+    group: 'type',
+    options: DIVIDERS,
+    display: 'buttons',
+    sources: ['arwesStyles'],
   },
   {
     key: 'textEffect',
@@ -1232,6 +1261,7 @@ export const PRESETS: readonly Preset[] = [
       meter: 'segmented',
       chartStyle: 'glow',
       chartGrid: 'dashed',
+      divider: 'steps',
       tableStyle: 'grid',
       scrollbarStyle: 'rail',
       hoverEffect: 'sweep',
@@ -1255,6 +1285,7 @@ export const PRESETS: readonly Preset[] = [
       meter: 'ring',
       chartStyle: 'area',
       chartGrid: 'dashed',
+      divider: 'strip',
       tableStyle: 'grid',
       scrollbarStyle: 'rail',
       entrance: 'scan',
@@ -1275,6 +1306,7 @@ export const PRESETS: readonly Preset[] = [
       surfaceOpacity: 70,
       font: 'electrolize',
       titleStyle: 'rule',
+      divider: 'separator',
       textEffect: 'decipher',
       background: 'moving-lines',
       backdropGradient: 'deep-space',
@@ -1441,6 +1473,7 @@ export const PRESETS: readonly Preset[] = [
       surfaceOpacity: 55,
       font: 'electrolize',
       titleStyle: 'rule',
+      divider: 'separator',
       textEffect: 'sequence',
       background: 'resonance',
       backdropGradient: 'nebula',

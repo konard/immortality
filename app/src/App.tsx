@@ -166,6 +166,7 @@ function Shell({
         data-font={settings.font}
         data-heading-case={settings.headingCase}
         data-title={settings.titleStyle}
+        data-divider={settings.divider}
         data-text-effect={settings.textEffect}
         data-entrance={settings.entrance}
         data-stagger={settings.stagger ? 'on' : 'off'}

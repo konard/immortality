@@ -1388,6 +1388,58 @@ table.data-table {
   letter-spacing: 0;
 }
 
+/* ---------- Section dividers ---------- */
+
+/* Arwes styleSeparator / styleSteps / styleStrip gradients between verdict paragraphs,
+   methodology items and above the footer. */
+.app-shell[data-divider='line'] {
+  --divider: linear-gradient(90deg, var(--neon-dim), transparent);
+  --divider-size: 100% 1px;
+}
+
+.app-shell[data-divider='separator'] {
+  --divider: linear-gradient(
+    90deg,
+    var(--neon) 0 8px,
+    transparent 8px 12px,
+    var(--neon) 12px 20px,
+    transparent 20px 24px,
+    color-mix(in srgb, var(--neon) 28%, transparent) 24px calc(100% - 24px),
+    transparent calc(100% - 24px) calc(100% - 20px),
+    var(--neon) calc(100% - 20px) calc(100% - 12px),
+    transparent calc(100% - 12px) calc(100% - 8px),
+    var(--neon) calc(100% - 8px)
+  );
+  --divider-size: 100% 2px;
+}
+
+.app-shell[data-divider='steps'] {
+  --divider: repeating-linear-gradient(90deg, var(--neon) 0 6px, transparent 6px 10px);
+  --divider-size: 66px 4px;
+}
+
+.app-shell[data-divider='strip'] {
+  --divider: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--neon) 60%, transparent) 0 4px,
+    transparent 4px 8px
+  );
+  --divider-size: 160px 6px;
+}
+
+.app-shell:not([data-divider='none']) :is(.verdict p + p, .methodology li + li, .site-footer) {
+  padding-top: 12px;
+  background: var(--divider) left top / var(--divider-size) no-repeat;
+}
+
+.app-shell:not([data-divider='none']) .methodology li + li {
+  margin-top: 8px;
+}
+
+.app-shell:not([data-divider='none']) .site-footer {
+  background-position: center top;
+}
+
 /* Chamfered SVG frames (octagon, kranox, nefrex, nero): the measured outline is the panel. */
 .frame:has(> .frame-shape) {
   background: transparent;
