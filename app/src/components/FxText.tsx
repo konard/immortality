@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { sounds } from '../sound';
 import { decipherFrame, effectDuration, revealOrder, sequenceFrame } from '../textEffects';
 import { motionAllowed, useUiSettings } from '../uiContext';
@@ -21,13 +21,16 @@ export function FxText({ text }: FxTextProps) {
   const animate = motionAllowed(settings) && (effect === 'decipher' || effect === 'sequence');
   // Start hidden so the final text does not flash before the first effect frame.
   const [display, setDisplay] = useState(animate ? '' : text);
+  // Read through a ref: dragging the speed slider should not replay every title.
+  const speed = useRef(settings.animationSpeed);
+  speed.current = settings.animationSpeed;
 
   useEffect(() => {
     if (!animate) {
       setDisplay(text);
       return;
     }
-    const duration = effectDuration(text, settings.animationSpeed);
+    const duration = effectDuration(text, speed.current);
     const order = revealOrder(text);
     const start = performance.now();
     let frame = 0;
@@ -49,7 +52,7 @@ export function FxText({ text }: FxTextProps) {
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [text, effect, animate, settings.animationSpeed]);
+  }, [text, effect, animate]);
 
   if (effect === 'glitch') {
     return (

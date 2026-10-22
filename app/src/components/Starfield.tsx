@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { BackgroundId, PaletteId } from '../settings';
 
 interface StarfieldProps {
@@ -44,9 +44,24 @@ const seededRandom = (seed: number) => {
   };
 };
 
+const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
+
+/** Tracks the OS reduced-motion preference, including changes while the page is open. */
+function useReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(() => window.matchMedia(REDUCED_MOTION).matches);
+  useEffect(() => {
+    const query = window.matchMedia(REDUCED_MOTION);
+    const onChange = () => setReduced(query.matches);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
+  return reduced;
+}
+
 /** Configurable deep-space canvas with two CSS grid overlays. */
 export function Starfield({ mode = 'stars', animated = true, palette }: StarfieldProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -54,7 +69,6 @@ export function Starfield({ mode = 'stars', animated = true, palette }: Starfiel
     const context = canvas.getContext('2d');
     if (!context) return;
 
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const styles = getComputedStyle(canvas);
     const neon = parseColor(styles.getPropertyValue('--neon'), FALLBACK_NEON);
     const accent = parseColor(styles.getPropertyValue('--threshold'), FALLBACK_ACCENT);
@@ -63,6 +77,9 @@ export function Starfield({ mode = 'stars', animated = true, palette }: Starfiel
     const shouldAnimate = animated && !reducedMotion;
     let stars: Star[] = [];
     let frame = 0;
+    // Elapsed time in 60 fps frames, so drift speed does not depend on the display refresh rate.
+    let lastTime = 0;
+    let step = 1;
     let width = window.innerWidth;
     let height = window.innerHeight;
     let traces: Array<{ points: Array<[number, number]>; length: number; period: number; offset: number }> = [];
@@ -160,7 +177,7 @@ export function Starfield({ mode = 'stars', animated = true, palette }: Starfiel
         context.fillStyle = `rgba(180, 235, 240, ${opacity * twinkle})`;
         context.fill();
         if (shouldAnimate) {
-          star.y -= star.speed;
+          star.y -= star.speed * step;
           if (star.y < -2) star.y = height + 2;
         }
       }
@@ -398,7 +415,7 @@ export function Starfield({ mode = 'stars', animated = true, palette }: Starfiel
           context.fillText(drop.glyphs[i], drop.x, y);
         }
         if (shouldAnimate) {
-          drop.y += drop.speed;
+          drop.y += drop.speed * step;
           if (Math.random() < 0.04) {
             drop.glyphs[Math.floor(Math.random() * drop.glyphs.length)] =
               RAIN_GLYPHS[Math.floor(Math.random() * RAIN_GLYPHS.length)];
@@ -455,6 +472,8 @@ export function Starfield({ mode = 'stars', animated = true, palette }: Starfiel
     };
 
     const draw = (time: number) => {
+      step = lastTime ? Math.min(4, (time - lastTime) / (1000 / 60)) : 1;
+      lastTime = time;
       context.clearRect(0, 0, width, height);
       if (mode === 'galaxy') drawGalaxy(time);
       else if (mode === 'dots') drawDots(time);
@@ -484,7 +503,7 @@ export function Starfield({ mode = 'stars', animated = true, palette }: Starfiel
       cancelAnimationFrame(frame);
       window.removeEventListener('resize', onResize);
     };
-  }, [animated, mode, palette]);
+  }, [animated, mode, palette, reducedMotion]);
 
   return (
     <div className={`space-backdrop space-backdrop--${mode}`} aria-hidden="true">
