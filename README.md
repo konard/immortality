@@ -37,10 +37,10 @@ next to the dashboard. The axes were collected from
 | Group | Axes |
 | --- | --- |
 | Color | 12 color systems: Mission teal, Glitchy violet, Solar amber, Signal mono, Tron cyan, Ares red, Clu orange, Athena gold, Aphrodite pink, Poseidon blue, Soul cyan, ZK matrix |
-| Panels | 13 panel materials (gradient, glass, frosted, flat, transparent, brushed steel, brass, copper, walnut wood, carbon fibre, holographic, black marble, concrete) with material opacity and backdrop blur; glow (none → heavy); frame shape (corner brackets, Arwes Octagon / Kranox / Nefrex SVG frames, lines, underline, HUD bracket, plain); chamfer size; border width; panel shadow; density; progress meter (bar, segmented, ring) |
-| Type & text | typeface pairs (system, mono, Orbitron, Electrolize, Chakra Petch, Titillium, terminal), text size, heading case, title effect (decipher, typewriter with caret, glitch) |
-| Scene & overlays | 18 animated backgrounds (stars, grids, galaxy, orbits, asteroids, dot matrix, moving lines, energy puffs, circuit board, data rain, nebula, aurora curtains, warp drive, hex lattice, radar sweep, constellation network), 7 backdrop gradients, background intensity and speed, CRT scanlines, scan sweep, vignette, flicker, film grain, pointer illuminator |
-| HUD & charts | status rail, start-up intro (boot sequence or "Intercept incoming transmission?" prompt), chart trace (line, area, neon, step), gridlines, line width |
+| Panels | 13 panel materials (gradient, glass, frosted, flat, transparent, brushed steel, brass, copper, walnut wood, carbon fibre, holographic, black marble, concrete) with material opacity and backdrop blur; glow (none → heavy); frame shape (corner brackets, Arwes Octagon / Kranox / Nefrex / Nero SVG frames, lines, underline, HUD bracket, plain); chamfer size; border width; panel shadow; density; progress meter (bar, segmented, ring) |
+| Type & text | typeface pairs (system, mono, Orbitron, Electrolize, Chakra Petch, Titillium, terminal), text size, heading case, title decoration (Arwes rule, zknet bar, Soul Extract `//`), title effect (decipher, typewriter with caret, glitch) |
+| Scene & overlays | 21 animated backgrounds (stars, grids, galaxy, orbits, asteroids, dot matrix, moving lines, energy puffs, circuit board, data rain, nebula, aurora curtains, warp drive, hex lattice, radar sweep, constellation network, Arwes grid lines, Soul Extract signal rails, and a sound resonance ring that ripples with every interface cue), 7 backdrop gradients, background intensity and speed, CRT scanlines, scan sweep, vignette, flicker, film grain, pointer illuminator |
+| HUD & charts | status rail, start-up intro (boot sequence or "Intercept incoming transmission?" prompt), chart trace (line, area, neon, step), gridlines, line width, stat-card sparklines, counting numbers |
 | Controls & data | skinned dropdowns everywhere, panel hover (glow, lift, light sweep), pointer cursor (crosshair, HUD reticle), data table style (lined, zebra, grid, terminal), scrollbars (thin, HUD rail, block) |
 | Motion | animations, panel entrance (assemble, fade, scan, flicker), staggered reveal, animation speed |
 | Audio | sound on/off, master volume, tone, room reverb, pitch variation, positional stereo, and several sounds per action (played at random, in turn or layered) chosen from a library of 26 synthesized sounds with neutral names (Quartz, Cobalt, Tungsten, Opal, Sonar, …) for hover, buttons, switches, selections, chart scanner, opening, closing, text effects, intro and notifications |
@@ -50,7 +50,8 @@ To find a good combination quickly:
 - **Presets** apply a complete look in one click: Poseidon (the default),
   Mission control (the original dashboard), The Grid, Ares, Arwes, Soul
   Extract, Glitchy, ZK matrix, Foundry (brushed steel and brass), Study
-  (walnut panels and soft wooden sounds) and Quiet.
+  (walnut panels and soft wooden sounds), Quiet and Resonance (Nero frames
+  over the sound resonance background).
 - **Randomize** shuffles the visual axes (comfort settings such as motion and
   volume are kept).
 - **Copy share link** puts the current combination into a `#ui=` URL; opening
@@ -68,8 +69,8 @@ interaction. `experiments/list-axes.ts` prints the full axis catalog and
 | ![Poseidon](docs/screenshots/preset-poseidon.png?raw=true) | ![Mission control](docs/screenshots/preset-mission.png?raw=true) | ![The Grid](docs/screenshots/preset-grid.png?raw=true) | ![Ares](docs/screenshots/preset-ares.png?raw=true) |
 | **Arwes** | **Soul Extract** | **Glitchy** | **ZK matrix** |
 | ![Arwes](docs/screenshots/preset-arwes.png?raw=true) | ![Soul Extract](docs/screenshots/preset-soulextract.png?raw=true) | ![Glitchy](docs/screenshots/preset-glitchy.png?raw=true) | ![ZK matrix](docs/screenshots/preset-zknet.png?raw=true) |
-| **Foundry** | **Study** | **Quiet** | |
-| ![Foundry](docs/screenshots/preset-foundry.png?raw=true) | ![Study](docs/screenshots/preset-study.png?raw=true) | ![Quiet](docs/screenshots/preset-minimal.png?raw=true) | |
+| **Foundry** | **Study** | **Quiet** | **Resonance** |
+| ![Foundry](docs/screenshots/preset-foundry.png?raw=true) | ![Study](docs/screenshots/preset-study.png?raw=true) | ![Quiet](docs/screenshots/preset-minimal.png?raw=true) | ![Resonance](docs/screenshots/preset-resonance.png?raw=true) |
 
 ![Panel materials](docs/screenshots/materials.png?raw=true)
 
