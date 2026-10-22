@@ -21,18 +21,53 @@ sounds, built and deployed to GitHub Pages by
 [GitHub Actions](.github/workflows/website.yml). The OWID data snapshot is
 refreshed automatically on every deployment.
 
-The **Settings** control makes the experience reversible without changing the
-data display: choose the original mission-teal palette or three alternatives,
-switch among stars, two grids, a galaxy, planet/star orbits, and asteroids,
-disable motion, or map a different synthesized sound to each interaction.
-Sound and animation are enabled by default; browser autoplay rules mean audio
-begins after the first interaction. Preferences are stored locally in the
-browser, and **Restore defaults** returns to the original colors and starfield.
-The animated interface is inspired by [glitchy.website](https://glitchy.website/),
-with direct links to the reference and the open-source Arwes bleep system in the
-settings panel.
+### Configurable futuristic UI
 
-![Configurable display and audio settings](docs/screenshots/settings-customization.png?raw=true)
+Every way of delivering the futuristic look is an independent, reversible
+**axis** in the **Settings** drawer, so styles can be mixed and compared live
+next to the dashboard. The axes were collected from
+[thegridcn](https://thegridcn.com) ([source](https://github.com/educlopez/thegridcn-ui),
+[dashboard](https://thegridcn.com/templates/dashboard),
+[analytics](https://thegridcn.com/templates/analytics)),
+[Arwes](https://github.com/arwes/arwes),
+[soulextract.com](https://soulextract.com/about) ([source](https://github.com/soulextract/soulextract.com)),
+[ZKN app chain](https://zknet.io/features/app-chain) and
+[glitchy.website](https://glitchy.website); each control links back to its references.
+
+| Group | Axes |
+| --- | --- |
+| Color | 12 color systems: Mission teal, Glitchy violet, Solar amber, Signal mono, Tron cyan, Ares red, Clu orange, Athena gold, Aphrodite pink, Poseidon blue, Soul cyan, ZK matrix |
+| Panels | glow (none → heavy), frame shape (corner brackets, Arwes Octagon / Kranox / Nefrex SVG frames, lines, underline, HUD bracket, plain), chamfer size, surface (gradient, glass, solid, transparent), density, progress meter (bar, segmented, ring) |
+| Type & text | typeface pairs (system, mono, Orbitron, Electrolize, Chakra Petch, Titillium, terminal), heading case, title effect (decipher, typewriter, glitch) |
+| Scene & overlays | 13 animated backgrounds (stars, grids, galaxy, orbits, asteroids, dot matrix, moving lines, energy puffs, circuit board, data rain, nebula), background intensity, CRT scanlines, scan sweep, vignette, flicker, film grain, pointer illuminator |
+| HUD & charts | status rail, start-up intro (boot sequence or "Intercept incoming transmission?" prompt), chart trace (line, area, neon, step), gridlines |
+| Motion | animations, panel entrance (assemble, fade, scan, flicker), staggered reveal, animation speed |
+| Audio | sound on/off, master volume, and a synthesized cue per interaction (hover, click, select, scan, open, typing, intro) |
+
+To find a good combination quickly:
+
+- **Presets** apply a complete look in one click: Mission control (the
+  original dashboard and default), The Grid, Ares, Arwes, Soul Extract,
+  Glitchy, ZK matrix and Quiet.
+- **Randomize** shuffles the visual axes (comfort settings such as motion and
+  volume are kept).
+- **Copy share link** puts the current combination into a `#ui=` URL; opening
+  it applies and saves those settings, so candidates can be compared and
+  shared.
+- **Restore defaults** returns to the original look.
+
+Preferences are stored locally in the browser. Sound and animation are enabled
+by default; browser autoplay rules mean audio begins after the first
+interaction. `experiments/list-axes.ts` prints the full axis catalog and
+`experiments/preset-gallery.js` re-renders the screenshots below.
+
+| Mission control (default) | The Grid | Ares | Arwes |
+| --- | --- | --- | --- |
+| ![Mission control](docs/screenshots/preset-mission.png?raw=true) | ![The Grid](docs/screenshots/preset-grid.png?raw=true) | ![Ares](docs/screenshots/preset-ares.png?raw=true) | ![Arwes](docs/screenshots/preset-arwes.png?raw=true) |
+| **Soul Extract** | **Glitchy** | **ZK matrix** | **Quiet** |
+| ![Soul Extract](docs/screenshots/preset-soulextract.png?raw=true) | ![Glitchy](docs/screenshots/preset-glitchy.png?raw=true) | ![ZK matrix](docs/screenshots/preset-zknet.png?raw=true) | ![Quiet](docs/screenshots/preset-minimal.png?raw=true) |
+
+![Settings drawer with presets and axis groups](docs/screenshots/settings-drawer.png?raw=true)
 
 ## Source
 

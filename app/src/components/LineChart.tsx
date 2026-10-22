@@ -3,6 +3,7 @@ import type { Point } from '../analytics';
 import { throttledScan } from '../sound';
 import { Frame } from './Frame';
 import { useElementWidth } from '../useElementWidth';
+import { motionAllowed, useUiSettings } from '../uiContext';
 
 interface Threshold {
   value: number;
@@ -24,6 +25,12 @@ interface LineChartProps {
 
 const HEIGHT = 240;
 const MARGIN = { top: 16, right: 58, bottom: 28, left: 46 };
+
+const GRID_DASH: Record<string, string | undefined> = {
+  solid: undefined,
+  dashed: '4 4',
+  dots: '1 5',
+};
 
 /** ~4–6 clean-numbered ticks spanning [min, max]. */
 export function niceTicks(min: number, max: number, count = 5): number[] {
@@ -49,6 +56,9 @@ export function LineChart({
   zeroLine,
   yClamp,
 }: LineChartProps) {
+  const settings = useUiSettings();
+  const { chartStyle, chartGrid } = settings;
+  const drawIn = motionAllowed(settings) && settings.entrance === 'scan';
   const wrapRef = useRef<HTMLDivElement>(null);
   const width = useElementWidth(wrapRef, 640);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
@@ -82,7 +92,16 @@ export function LineChart({
     const path = points
       .map((p, i) => `${i === 0 ? 'M' : 'L'}${x(p.year).toFixed(2)},${y(p.value).toFixed(2)}`)
       .join('');
-    return { xMin, xMax, yMin, yMax, x, y, path, clipped, plotW, plotH };
+    const stepPath = points
+      .map((p, i) =>
+        i === 0
+          ? `M${x(p.year).toFixed(2)},${y(p.value).toFixed(2)}`
+          : `L${x(p.year).toFixed(2)},${y(points[i - 1].value).toFixed(2)}L${x(p.year).toFixed(2)},${y(p.value).toFixed(2)}`
+      )
+      .join('');
+    const bottom = (MARGIN.top + plotH).toFixed(2);
+    const areaPath = `${path}L${x(xMax).toFixed(2)},${bottom}L${x(xMin).toFixed(2)},${bottom}Z`;
+    return { xMin, xMax, yMin, yMax, x, y, path, stepPath, areaPath, clipped, plotW, plotH };
   }, [points, width, threshold, zeroLine, yClamp]);
 
   if (!geometry || points.length < 2) {
@@ -93,7 +112,9 @@ export function LineChart({
     );
   }
 
-  const { xMin, xMax, x, y, path, clipped } = geometry;
+  const { xMin, xMax, x, y, clipped } = geometry;
+  const path = chartStyle === 'step' ? geometry.stepPath : geometry.path;
+  const fillId = `${clipId}-fill`;
   const yTicks = niceTicks(geometry.yMin, geometry.yMax);
   const xTicks = niceTicks(xMin, xMax, 6).filter((t) => Number.isInteger(t));
   const last = points[points.length - 1];
@@ -160,19 +181,27 @@ export function LineChart({
                 height={geometry.plotH}
               />
             </clipPath>
+            <linearGradient id={fillId} x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="var(--series-1)" stopOpacity={0.32} />
+              <stop offset="100%" stopColor="var(--series-1)" stopOpacity={0} />
+            </linearGradient>
           </defs>
 
-          {/* Gridlines: solid hairlines, recessive */}
+          {/* Gridlines: recessive hairlines (solid, dashed, dotted or hidden) */}
           {yTicks.map((tick) => (
             <g key={`y${tick}`}>
-              <line
-                x1={MARGIN.left}
-                x2={width - MARGIN.right}
-                y1={y(tick)}
-                y2={y(tick)}
-                stroke="var(--gridline)"
-                strokeWidth={1}
-              />
+              {chartGrid !== 'none' && (
+                <line
+                  x1={MARGIN.left}
+                  x2={width - MARGIN.right}
+                  y1={y(tick)}
+                  y2={y(tick)}
+                  stroke={chartGrid === 'dots' ? 'var(--baseline)' : 'var(--gridline)'}
+                  strokeWidth={chartGrid === 'dots' ? 1.5 : 1}
+                  strokeDasharray={GRID_DASH[chartGrid]}
+                  strokeLinecap={chartGrid === 'dots' ? 'round' : undefined}
+                />
+              )}
               <text
                 x={MARGIN.left - 8}
                 y={y(tick) + 3.5}
@@ -236,15 +265,39 @@ export function LineChart({
             </g>
           )}
 
-          {/* Data line */}
+          {/* Data line, with optional area fill or neon bloom */}
+          {chartStyle === 'area' && (
+            <path
+              d={geometry.areaPath}
+              fill={`url(#${fillId})`}
+              clipPath={`url(#${clipId})`}
+              className={drawIn ? 'chart-area-draw' : undefined}
+            />
+          )}
+          {chartStyle === 'glow' && (
+            <path
+              d={path}
+              fill="none"
+              stroke="var(--series-1)"
+              strokeWidth={7}
+              strokeOpacity={0.28}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              clipPath={`url(#${clipId})`}
+              className="chart-line-bloom"
+            />
+          )}
           <path
+            key={drawIn ? `${path.length}-${chartStyle}` : 'static'}
             d={path}
             fill="none"
             stroke="var(--series-1)"
             strokeWidth={2}
-            strokeLinejoin="round"
+            strokeLinejoin={chartStyle === 'step' ? 'miter' : 'round'}
             strokeLinecap="round"
             clipPath={`url(#${clipId})`}
+            pathLength={drawIn ? 1 : undefined}
+            className={drawIn ? 'chart-line-draw' : undefined}
           />
 
           {/* Endpoint marker (surface ring) + selective direct label */}

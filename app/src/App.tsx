@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import {
   acceleration,
   assessLev,
@@ -16,9 +24,16 @@ import { StatTile } from './components/StatTile';
 import { LineChart } from './components/LineChart';
 import { DataTable } from './components/DataTable';
 import { SettingsPanel } from './components/SettingsPanel';
+import { Overlays } from './components/Overlays';
+import { HudBar } from './components/HudBar';
+import { Intro } from './components/Intro';
+import { FxText } from './components/FxText';
+import { UiSettingsContext, motionAllowed } from './uiContext';
 import {
   DEFAULT_SETTINGS,
   SETTINGS_STORAGE_KEY,
+  applySharedLook,
+  decodeShareHash,
   parseStoredSettings,
   type UiSettings,
 } from './settings';
@@ -29,12 +44,72 @@ const inRange = (points: Point[], fromYear: number) => points.filter((p) => p.ye
 
 const initialSettings = (): UiSettings => {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS;
+  let stored = DEFAULT_SETTINGS;
   try {
-    return parseStoredSettings(window.localStorage.getItem(SETTINGS_STORAGE_KEY));
+    stored = parseStoredSettings(window.localStorage.getItem(SETTINGS_STORAGE_KEY));
   } catch {
-    return DEFAULT_SETTINGS;
+    // Storage may be disabled; fall back to the defaults.
   }
+  // A shared `#ui=` link wins over the saved look (and is then saved), but never over
+  // the viewer's own motion and audio preferences.
+  const shared = decodeShareHash(window.location.hash);
+  return shared ? applySharedLook(stored, shared) : stored;
 };
+
+/**
+ * Root element carrying every visual axis as a data attribute or CSS variable, so the
+ * stylesheet can switch looks without React re-rendering the dashboard markup.
+ */
+function Shell({
+  settings,
+  settingsOpen = false,
+  children,
+}: {
+  settings: UiSettings;
+  settingsOpen?: boolean;
+  children: ReactNode;
+}) {
+  const style: Record<string, string> = { '--corner': `${settings.cornerSize}px` };
+  if (settings.animationSpeed !== 100) {
+    style['--motion-scale'] = String(100 / settings.animationSpeed);
+  }
+  if (settings.backgroundIntensity !== 100) {
+    style['--bg-opacity'] = String(Math.min(1, settings.backgroundIntensity / 100));
+    style['--bg-brightness'] = String(Math.max(1, settings.backgroundIntensity / 100));
+  }
+  const classes = ['app-shell'];
+  if (!settings.animations) classes.push('motion-off');
+  if (settingsOpen) classes.push('settings-open');
+  return (
+    <UiSettingsContext.Provider value={settings}>
+      <div
+        className={classes.join(' ')}
+        data-palette={settings.palette}
+        data-glow={settings.glow}
+        data-frame={settings.frame}
+        data-surface={settings.surface}
+        data-density={settings.density}
+        data-meter={settings.meter}
+        data-font={settings.font}
+        data-heading-case={settings.headingCase}
+        data-text-effect={settings.textEffect}
+        data-entrance={settings.entrance}
+        data-stagger={settings.stagger ? 'on' : 'off'}
+        data-chart={settings.chartStyle}
+        data-status-bar={settings.statusBar ? 'on' : 'off'}
+        style={style as CSSProperties}
+      >
+        <Starfield
+          mode={settings.background}
+          animated={settings.animations}
+          palette={settings.palette}
+        />
+        <Overlays />
+        {children}
+      </div>
+    </UiSettingsContext.Provider>
+  );
+}
 
 export default function App() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
@@ -43,7 +118,10 @@ export default function App() {
   const [rangeId, setRangeId] = useState('all');
   const [uiSettings, setUiSettings] = useState<UiSettings>(initialSettings);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // The intro plays once per page load (and on demand from the settings drawer).
+  const [introVisible, setIntroVisible] = useState(() => uiSettings.intro !== 'none');
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
+  const introReplayed = useRef(false);
 
   const closeSettings = useCallback(() => {
     setSettingsOpen(false);
@@ -62,7 +140,23 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    sounds.configure(uiSettings.sound, uiSettings.effects);
+    // Drop the applied share link so reloads use the (now saved) preference.
+    const dropShareHash = () =>
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    if (decodeShareHash(window.location.hash)) dropShareHash();
+    // A share link pasted into an already open tab only changes the hash (no reload).
+    const onHashChange = () => {
+      const shared = decodeShareHash(window.location.hash);
+      if (!shared) return;
+      setUiSettings((current) => applySharedLook(current, shared));
+      dropShareHash();
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  useEffect(() => {
+    sounds.configure(uiSettings.sound, uiSettings.effects, uiSettings.volume);
     try {
       window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(uiSettings));
     } catch {
@@ -82,24 +176,16 @@ export default function App() {
 
   if (loadError) {
     return (
-      <div
-        className={uiSettings.animations ? 'app-shell' : 'app-shell motion-off'}
-        data-palette={uiSettings.palette}
-      >
-        <Starfield mode={uiSettings.background} animated={uiSettings.animations} />
+      <Shell settings={uiSettings}>
         <div className="layout">
           <p className="load-error">Data link failure — {loadError}</p>
         </div>
-      </div>
+      </Shell>
     );
   }
   if (!snapshot || !analysis) {
     return (
-      <div
-        className={uiSettings.animations ? 'app-shell' : 'app-shell motion-off'}
-        data-palette={uiSettings.palette}
-      >
-        <Starfield mode={uiSettings.background} animated={uiSettings.animations} />
+      <Shell settings={uiSettings}>
         <div className="layout loading-layout">
           <div className="loading" role="status">
             <span className="busy-indicator" aria-hidden="true">
@@ -108,7 +194,7 @@ export default function App() {
             Establishing data link…
           </div>
         </div>
-      </div>
+      </Shell>
     );
   }
 
@@ -125,15 +211,14 @@ export default function App() {
   };
 
   return (
-    <div
-      className={uiSettings.animations ? 'app-shell' : 'app-shell motion-off'}
-      data-palette={uiSettings.palette}
-    >
-      <Starfield mode={uiSettings.background} animated={uiSettings.animations} />
+    <Shell settings={uiSettings} settingsOpen={settingsOpen}>
+      <HudBar entity={entity} year={latestYear} />
       <div className="layout">
         <header className="masthead">
           <div>
-            <h1>Immortality</h1>
+            <h1>
+              <FxText text="Immortality" />
+            </h1>
             <p className="subtitle">Longevity escape velocity monitor · mission year {latestYear}</p>
           </div>
           <div className="header-actions">
@@ -371,7 +456,27 @@ export default function App() {
           setUiSettings(DEFAULT_SETTINGS);
           sounds.select();
         }}
+        onPlayIntro={() => {
+          introReplayed.current = true;
+          setSettingsOpen(false);
+          setIntroVisible(true);
+        }}
       />
-    </div>
+      {introVisible && uiSettings.intro !== 'none' && (
+        <Intro
+          mode={uiSettings.intro}
+          speed={uiSettings.animationSpeed}
+          animate={motionAllowed(uiSettings)}
+          onAnswer={(soundOn) => setUiSettings((current) => ({ ...current, sound: soundOn }))}
+          onDone={() => {
+            setIntroVisible(false);
+            // Replayed from the (now closed) drawer: the trigger is gone, so land on its toggle.
+            if (!introReplayed.current) return;
+            introReplayed.current = false;
+            requestAnimationFrame(() => settingsButtonRef.current?.focus());
+          }}
+        />
+      )}
+    </Shell>
   );
 }

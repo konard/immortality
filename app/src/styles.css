@@ -244,7 +244,7 @@ body {
   background: linear-gradient(160deg, var(--surface-2), var(--surface-1));
   border: 1px solid var(--neon-faint);
   padding: 18px 20px;
-  animation: frame-reveal 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: frame-reveal calc(520ms * var(--motion-scale, 1)) cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .frame::before,
@@ -253,12 +253,12 @@ body {
 .frame > .corner::after {
   content: '';
   position: absolute;
-  width: 14px;
-  height: 14px;
+  width: var(--corner, 14px);
+  height: var(--corner, 14px);
   border: 0 solid var(--neon);
   filter: drop-shadow(0 0 4px var(--neon-dim));
   pointer-events: none;
-  animation: corner-draw 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: corner-draw calc(720ms * var(--motion-scale, 1)) cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes frame-reveal {
@@ -632,28 +632,21 @@ table.data-table {
   color: var(--neon);
 }
 
-/* ---------- Settings modal ---------- */
-
-.settings-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  overflow-y: auto;
-  background: rgba(2, 5, 9, 0.78);
-  backdrop-filter: blur(8px);
-  animation: backdrop-in 180ms ease-out both;
-}
+/* ---------- Settings drawer (docked, non-modal) ---------- */
 
 .settings-panel {
-  width: min(820px, 100%);
-  max-height: calc(100vh - 40px);
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 25;
+  width: min(420px, 100vw);
   overflow-y: auto;
-  padding: 24px;
+  overscroll-behavior: contain;
+  padding: 22px 20px;
+  background: linear-gradient(160deg, var(--surface-2), var(--surface-1));
   box-shadow: 0 0 54px var(--neon-faint);
-  animation: modal-in 340ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: drawer-in calc(340ms * var(--motion-scale, 1)) cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .settings-header,
@@ -725,9 +718,9 @@ table.data-table {
 
 .settings-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  margin-top: 18px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  margin-top: 14px;
 }
 
 .settings-grid fieldset {
@@ -766,10 +759,6 @@ table.data-table {
   font-size: 12px;
 }
 
-#background-select {
-  width: 100%;
-  padding: 7px 10px;
-}
 
 .palette-options {
   display: grid;
@@ -868,11 +857,16 @@ table.data-table {
 
 .sound-row {
   display: grid;
-  grid-template-columns: minmax(105px, 0.7fr) minmax(150px, 1fr) minmax(150px, 1fr);
-  gap: 10px;
-  min-height: 38px;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 4px 10px;
+  padding: 8px 0;
   border-top: 1px solid var(--gridline);
   font-size: 12px;
+}
+
+.sound-row a,
+.sound-row .source-placeholder {
+  grid-column: 2;
 }
 
 .sound-row select {
@@ -915,22 +909,14 @@ table.data-table {
   color: var(--page);
 }
 
-@keyframes backdrop-in {
+@keyframes drawer-in {
   from {
     opacity: 0;
-  }
-}
-
-@keyframes modal-in {
-  from {
-    opacity: 0;
-    transform: translateY(18px) scale(0.98);
-    clip-path: inset(0 0 100%);
+    transform: translateX(32px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
-    clip-path: inset(0);
+    transform: translateX(0);
   }
 }
 
@@ -996,6 +982,8 @@ table.data-table {
 .motion-off *::after {
   scroll-behavior: auto !important;
   animation-duration: 0.001ms !important;
+  /* Staggered entrances would otherwise stay hidden for their whole delay. */
+  animation-delay: 0s !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.001ms !important;
 }
@@ -1006,6 +994,7 @@ table.data-table {
   *::after {
     scroll-behavior: auto !important;
     animation-duration: 0.001ms !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
@@ -1025,24 +1014,6 @@ table.data-table {
     grid-column: 1 / -1;
   }
 
-  .settings-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .sound-map {
-    grid-column: auto;
-  }
-
-  .sound-row {
-    grid-template-columns: 90px 1fr;
-    padding: 8px 0;
-  }
-
-  .sound-row a,
-  .sound-row .source-placeholder {
-    grid-column: 2;
-  }
-
   .settings-actions {
     align-items: stretch;
     flex-direction: column-reverse;
@@ -1051,5 +1022,1325 @@ table.data-table {
   .primary-button,
   .secondary-button {
     width: 100%;
+  }
+}
+
+/* =====================================================================
+   Configurable axes. Every rule below is keyed on a data attribute of
+   .app-shell (see Shell in App.tsx); the defaults match none of them
+   except where noted, so the original look is unchanged.
+   ===================================================================== */
+
+/* ---------- Palettes: thegridcn themes, Soul Extract, ZKN ---------- */
+
+.app-shell[data-palette='tron'],
+.app-shell[data-palette='ares'],
+.app-shell[data-palette='clu'],
+.app-shell[data-palette='athena'],
+.app-shell[data-palette='aphrodite'],
+.app-shell[data-palette='poseidon'] {
+  --page: #000103;
+}
+
+.app-shell[data-palette='tron'] {
+  --surface-1: #000b0b;
+  --surface-2: #001414;
+  --text-primary: #e4fbfb;
+  --text-secondary: #9ac0bf;
+  --text-muted: #597c7c;
+  --gridline: #012525;
+  --baseline: #0c3d3d;
+  --series-1: #00b2b4;
+  --threshold: #fbc600;
+  --neon: #00cfd1;
+  --neon-dim: rgba(0, 207, 209, 0.34);
+  --neon-faint: rgba(0, 207, 209, 0.11);
+}
+
+.app-shell[data-palette='ares'] {
+  --surface-1: #110303;
+  --surface-2: #1c0908;
+  --text-primary: #fbeceb;
+  --text-secondary: #d0aeab;
+  --text-muted: #8b6c69;
+  --gridline: #301715;
+  --baseline: #4c2b28;
+  --series-1: #ff4b4f;
+  --threshold: #00cfd1;
+  --neon: #ff2f45;
+  --neon-dim: rgba(242, 0, 36, 0.4);
+  --neon-faint: rgba(242, 0, 36, 0.13);
+}
+
+.app-shell[data-palette='clu'] {
+  --surface-1: #100400;
+  --surface-2: #1b0b02;
+  --text-primary: #fdf0e6;
+  --text-secondary: #ccb1a0;
+  --text-muted: #886f5e;
+  --gridline: #2e1a0c;
+  --baseline: #492e1b;
+  --series-1: #e56f00;
+  --threshold: #00cfd1;
+  --neon: #ff8300;
+  --neon-dim: rgba(255, 131, 0, 0.36);
+  --neon-faint: rgba(255, 131, 0, 0.11);
+}
+
+.app-shell[data-palette='athena'] {
+  --surface-1: #0c0700;
+  --surface-2: #150e00;
+  --text-primary: #fdf7e2;
+  --text-secondary: #c1b79b;
+  --text-muted: #7e745a;
+  --gridline: #271e06;
+  --baseline: #3f3414;
+  --series-1: #dcae00;
+  --threshold: #59aaf8;
+  --neon: #fbc600;
+  --neon-dim: rgba(251, 198, 0, 0.34);
+  --neon-faint: rgba(251, 198, 0, 0.1);
+}
+
+.app-shell[data-palette='aphrodite'] {
+  --surface-1: #0f040b;
+  --surface-2: #190914;
+  --text-primary: #fdeef8;
+  --text-secondary: #caaebf;
+  --text-muted: #856c7c;
+  --gridline: #2c1725;
+  --baseline: #472b3d;
+  --series-1: #e05cbc;
+  --threshold: #56eeee;
+  --neon: #f259c8;
+  --neon-dim: rgba(242, 89, 200, 0.36);
+  --neon-faint: rgba(242, 89, 200, 0.11);
+}
+
+.app-shell[data-palette='poseidon'] {
+  --surface-1: #010813;
+  --surface-2: #04101e;
+  --text-primary: #e9f3fd;
+  --text-secondary: #a5bad1;
+  --text-muted: #63778c;
+  --gridline: #102031;
+  --baseline: #21374e;
+  --series-1: #2f8fea;
+  --threshold: #fbc600;
+  --neon: #59aaf8;
+  --neon-dim: rgba(0, 129, 241, 0.42);
+  --neon-faint: rgba(0, 129, 241, 0.14);
+}
+
+.app-shell[data-palette='soulextract'] {
+  --page: #000000;
+  --surface-1: #02161a;
+  --surface-2: #062328;
+  --text-primary: #e8fdff;
+  --text-secondary: #a6d9de;
+  --text-muted: #5d8c91;
+  --gridline: #06343a;
+  --baseline: #0b4a50;
+  --series-1: #19a0b3;
+  --threshold: #fae127;
+  --neon: #27e1fa;
+  --neon-dim: rgba(39, 225, 250, 0.34);
+  --neon-faint: rgba(39, 225, 250, 0.1);
+}
+
+.app-shell[data-palette='matrix'] {
+  --page: #000400;
+  --surface-1: #020c04;
+  --surface-2: #041507;
+  --text-primary: #e6ffe9;
+  --text-secondary: #9fc7a6;
+  --text-muted: #5d7f63;
+  --gridline: #0b2611;
+  --baseline: #164020;
+  --series-1: #1fbf55;
+  --threshold: #e8f75a;
+  --neon: #3dff7a;
+  --neon-dim: rgba(61, 255, 122, 0.3);
+  --neon-faint: rgba(61, 255, 122, 0.09);
+}
+
+.app-shell:not([data-palette='mission']) .meter-track {
+  background: color-mix(in srgb, var(--series-1) 18%, var(--surface-1));
+}
+
+.app-shell:not([data-palette='mission']) .meter-fill {
+  box-shadow: 0 0 12px var(--neon-dim);
+}
+
+.palette-swatch--tron {
+  background: linear-gradient(135deg, #00cfd1 50%, #001414 50%);
+}
+
+.palette-swatch--ares {
+  background: linear-gradient(135deg, #f20024 50%, #1c0908 50%);
+}
+
+.palette-swatch--clu {
+  background: linear-gradient(135deg, #ff8300 50%, #1b0b02 50%);
+}
+
+.palette-swatch--athena {
+  background: linear-gradient(135deg, #fbc600 50%, #150e00 50%);
+}
+
+.palette-swatch--aphrodite {
+  background: linear-gradient(135deg, #f259c8 50%, #190914 50%);
+}
+
+.palette-swatch--poseidon {
+  background: linear-gradient(135deg, #0081f1 50%, #04101e 50%);
+}
+
+.palette-swatch--soulextract {
+  background: linear-gradient(135deg, #27e1fa 50%, #fae127 50% 62%, #02161a 62%);
+}
+
+.palette-swatch--matrix {
+  background: linear-gradient(135deg, #3dff7a 50%, #041507 50%);
+}
+
+/* ---------- Background intensity ---------- */
+
+.app-shell[style*='--bg-opacity'] .space-backdrop > * {
+  opacity: var(--bg-opacity, 1);
+  filter: brightness(var(--bg-brightness, 1));
+}
+
+/* ---------- Glow ---------- */
+
+.app-shell[data-glow='none'] .masthead h1,
+.app-shell[data-glow='none'] .frame-title {
+  text-shadow: none;
+}
+
+.app-shell[data-glow='none'] .frame::before,
+.app-shell[data-glow='none'] .frame::after,
+.app-shell[data-glow='none'] .frame > .corner::before,
+.app-shell[data-glow='none'] .frame > .corner::after {
+  filter: none;
+}
+
+.app-shell[data-glow='none'] .meter-fill,
+.app-shell[data-glow='none'] .settings-panel,
+.app-shell[data-glow='none'] .meter-segment.is-lit {
+  box-shadow: none;
+}
+
+.app-shell[data-glow='none'] .frame-shape svg {
+  filter: none;
+}
+
+.app-shell[data-glow='medium'] .frame,
+.app-shell[data-glow='heavy'] .frame {
+  border-color: var(--neon-dim);
+  box-shadow:
+    0 0 18px var(--neon-faint),
+    inset 0 0 18px var(--neon-faint);
+  transition: box-shadow calc(240ms * var(--motion-scale, 1));
+}
+
+.app-shell[data-glow='medium'] .frame-title,
+.app-shell[data-glow='heavy'] .frame-title {
+  text-shadow: 0 0 8px var(--neon-dim);
+}
+
+.app-shell[data-glow='medium'] .hero-number,
+.app-shell[data-glow='heavy'] .hero-number {
+  text-shadow: 0 0 14px var(--neon-faint);
+}
+
+.app-shell[data-glow='heavy'] .frame {
+  box-shadow:
+    0 0 28px var(--neon-dim),
+    inset 0 0 26px var(--neon-faint);
+}
+
+.app-shell[data-glow='heavy'] .frame:hover {
+  box-shadow:
+    0 0 44px var(--neon-dim),
+    inset 0 0 34px var(--neon-dim);
+}
+
+.app-shell[data-glow='heavy'] .masthead h1 {
+  text-shadow:
+    0 0 10px var(--neon),
+    0 0 32px var(--neon-dim);
+}
+
+.app-shell[data-glow='heavy'] .frame::before,
+.app-shell[data-glow='heavy'] .frame::after,
+.app-shell[data-glow='heavy'] .frame > .corner::before,
+.app-shell[data-glow='heavy'] .frame > .corner::after {
+  filter: drop-shadow(0 0 6px var(--neon)) drop-shadow(0 0 12px var(--neon-dim));
+}
+
+.app-shell[data-glow='heavy'] .frame-title {
+  text-shadow:
+    0 0 6px var(--neon),
+    0 0 18px var(--neon-dim);
+}
+
+/* SVG frames and the settings drawer already define their own edge. */
+.app-shell[data-glow='medium'] .frame:has(> .frame-shape),
+.app-shell[data-glow='heavy'] .frame:has(> .frame-shape) {
+  box-shadow: none;
+}
+
+.app-shell[data-glow='medium'] .frame-shape svg {
+  filter: drop-shadow(0 0 6px var(--neon-faint));
+}
+
+.app-shell[data-glow='heavy'] .frame-shape svg {
+  filter: drop-shadow(0 0 8px var(--neon-dim));
+}
+
+/* ---------- Panel surfaces ---------- */
+
+.app-shell {
+  --frame-fill: var(--surface-2);
+}
+
+.app-shell[data-surface='glass'] {
+  --frame-fill: color-mix(in srgb, var(--surface-2) 52%, transparent);
+}
+
+.app-shell[data-surface='glass'] .frame {
+  background: color-mix(in srgb, var(--surface-2) 52%, transparent);
+  -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  backdrop-filter: blur(10px) saturate(1.3);
+}
+
+.app-shell[data-surface='solid'] {
+  --frame-fill: var(--surface-1);
+}
+
+.app-shell[data-surface='solid'] .frame {
+  background: var(--surface-1);
+}
+
+.app-shell[data-surface='transparent'] {
+  --frame-fill: transparent;
+}
+
+.app-shell[data-surface='transparent'] .frame:not(.settings-panel) {
+  background: transparent;
+}
+
+/* ---------- Frame shapes ---------- */
+
+.app-shell[data-frame='plain'] .frame::before,
+.app-shell[data-frame='plain'] .frame::after,
+.app-shell[data-frame='plain'] .frame > .corner,
+.app-shell[data-frame='lines'] .frame::after,
+.app-shell[data-frame='lines'] .frame > .corner::before,
+.app-shell[data-frame='underline'] .frame::before,
+.app-shell[data-frame='underline'] .frame::after,
+.app-shell[data-frame='underline'] .frame > .corner::before {
+  display: none;
+}
+
+.app-shell[data-frame='plain'] .frame {
+  border-color: var(--neon-dim);
+}
+
+/* Lines: rails top and bottom, an accent bar at the start and end. */
+.app-shell[data-frame='lines'] .frame {
+  border-color: var(--neon-dim) transparent;
+}
+
+.app-shell[data-frame='lines'] .frame::before,
+.app-shell[data-frame='lines'] .frame > .corner::after {
+  width: calc(var(--corner, 14px) * 4);
+  height: 0;
+  border-width: 0;
+  border-top-width: 2px;
+}
+
+.app-shell[data-frame='lines'] .frame > .corner::after {
+  border-top-width: 0;
+  border-bottom-width: 2px;
+}
+
+/* Underline: a single glowing base line with a bright end mark. */
+.app-shell[data-frame='underline'] .frame {
+  border-color: transparent transparent var(--neon-dim);
+}
+
+.app-shell[data-frame='underline'] .frame > .corner::after {
+  width: calc(var(--corner, 14px) * 3);
+  height: 0;
+  border-width: 0 0 2px;
+}
+
+/* HUD: thegridcn brackets offset outside the panel, a title marker and dashed rule. */
+.app-shell[data-frame='hud'] .frame {
+  border-color: var(--neon-faint);
+}
+
+.app-shell[data-frame='hud'] .frame::before {
+  top: -5px;
+  left: -5px;
+}
+
+.app-shell[data-frame='hud'] .frame::after {
+  top: -5px;
+  right: -5px;
+}
+
+.app-shell[data-frame='hud'] .frame > .corner::before {
+  bottom: -5px;
+  left: -5px;
+}
+
+.app-shell[data-frame='hud'] .frame > .corner::after {
+  bottom: -5px;
+  right: -5px;
+}
+
+.app-shell[data-frame='hud'] .frame-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+  border-bottom: 1px dashed var(--neon-dim);
+}
+
+.app-shell[data-frame='hud'] .frame-title::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  background: var(--neon);
+  box-shadow: 0 0 6px var(--neon-dim);
+}
+
+/* Chamfered SVG frames (octagon, kranox, nefrex): the measured outline is the panel. */
+.frame:has(> .frame-shape) {
+  background: transparent;
+  border-color: transparent;
+  isolation: isolate;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.frame:has(> .frame-shape)::before,
+.frame:has(> .frame-shape)::after,
+.frame:has(> .frame-shape) > .corner {
+  display: none;
+}
+
+.frame-shape {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.frame-shape svg {
+  display: block;
+  overflow: visible;
+}
+
+.frame-shape-fill {
+  fill: var(--frame-fill);
+  stroke: none;
+}
+
+.app-shell[data-surface='glass'] .frame-shape-fill {
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.frame-shape-line {
+  fill: none;
+  stroke: var(--neon-dim);
+  stroke-width: 1;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: frame-line-draw calc(900ms * var(--motion-scale, 1)) cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.frame-shape-accent {
+  fill: none;
+  stroke: var(--neon);
+  stroke-width: 3;
+  stroke-linecap: square;
+  animation: corner-fade calc(900ms * var(--motion-scale, 1)) ease-out both;
+}
+
+@keyframes frame-line-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes corner-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ---------- Density ---------- */
+
+.app-shell[data-density='compact'] .layout {
+  gap: 12px;
+  padding-top: 14px;
+}
+
+.app-shell[data-density='compact'] .hero {
+  gap: 10px;
+}
+
+.app-shell[data-density='compact'] .frame:not(.settings-panel) {
+  padding: 12px 14px;
+}
+
+.app-shell[data-density='spacious'] .layout {
+  gap: 30px;
+  padding-top: 34px;
+}
+
+.app-shell[data-density='spacious'] .hero {
+  gap: 20px;
+}
+
+.app-shell[data-density='spacious'] .frame:not(.settings-panel) {
+  padding: 26px 30px;
+}
+
+/* ---------- Meters ---------- */
+
+.meter-segments {
+  display: grid;
+  grid-template-columns: repeat(20, minmax(0, 1fr));
+  gap: 3px;
+  height: 14px;
+}
+
+.meter-segment {
+  background: color-mix(in srgb, var(--series-1) 16%, var(--surface-1));
+}
+
+.meter-segment.is-lit {
+  background: var(--series-1);
+  box-shadow: 0 0 8px var(--neon-dim);
+  animation: segment-on calc(260ms * var(--motion-scale, 1)) ease-out both;
+}
+
+@keyframes segment-on {
+  from {
+    opacity: 0.15;
+  }
+}
+
+.gauge-ring-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 6px;
+}
+
+.meter-ring {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.meter-ring-track,
+.meter-ring-fill {
+  fill: none;
+  stroke-width: 6;
+}
+
+.meter-ring-track {
+  stroke: color-mix(in srgb, var(--series-1) 16%, var(--surface-1));
+}
+
+.meter-ring-fill {
+  stroke: var(--series-1);
+  filter: drop-shadow(0 0 4px var(--neon-dim));
+  transition: stroke-dasharray calc(700ms * var(--motion-scale, 1)) cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.meter-ring-tick {
+  stroke: var(--neon-dim);
+  stroke-width: 1;
+}
+
+.gauge-ring-row > div {
+  min-width: 0;
+}
+
+.gauge-ring-row .hero-number {
+  font-size: 40px;
+}
+
+.gauge-ring-row .hero-number .unit {
+  display: block;
+  margin: 2px 0 0;
+  font-size: 14px;
+}
+
+/* ---------- Typography ---------- */
+
+.app-shell[data-font='mono'] {
+  --font-body: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --font-heading: var(--font-body);
+}
+
+.app-shell[data-font='orbitron'] {
+  --font-body: 'Electrolize', system-ui, sans-serif;
+  --font-heading: 'Orbitron', var(--font-body);
+}
+
+.app-shell[data-font='chakra'] {
+  --font-body: 'Chakra Petch', system-ui, sans-serif;
+  --font-heading: 'Orbitron', var(--font-body);
+}
+
+.app-shell[data-font='electrolize'] {
+  --font-body: 'Titillium Web', system-ui, sans-serif;
+  --font-heading: 'Electrolize', var(--font-body);
+}
+
+.app-shell[data-font='terminal'] {
+  --font-body: 'Share Tech Mono', ui-monospace, monospace;
+  --font-heading: var(--font-body);
+}
+
+.app-shell:not([data-font='system']) {
+  font-family: var(--font-body);
+}
+
+.app-shell:not([data-font='system']) :is(h1, h2, h3, .frame-title, .hud-bar, .intro-greeting) {
+  font-family: var(--font-heading);
+}
+
+.app-shell[data-font='mono'] :is(.hero-number, .stat-tile .value),
+.app-shell[data-font='terminal'] :is(.hero-number, .stat-tile .value) {
+  letter-spacing: -0.02em;
+}
+
+/* Monospace digits are wider; keep "10.8 % of LEV" on one line in the hero tile. */
+.app-shell[data-font='mono'] .hero-number:not(.gauge-ring-row *),
+.app-shell[data-font='terminal'] .hero-number:not(.gauge-ring-row *) {
+  font-size: 46px;
+}
+
+.app-shell[data-heading-case='normal'] :is(.masthead h1, .frame-title, .settings-header h2) {
+  text-transform: none;
+  letter-spacing: 0.06em;
+}
+
+.app-shell[data-heading-case='normal'] .masthead .subtitle {
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.fx-text {
+  white-space: pre-wrap;
+}
+
+/* Keep units together so wide typefaces wrap the whole unit, not "yr /" + "yr²";
+   inline-block adds a break opportunity between the number and its unit. */
+.hero-number .unit,
+.stat-tile .value .unit {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+/* glitchy.website-style RGB split: two offset copies sliced by animated clip paths. */
+.fx-glitch {
+  position: relative;
+  display: inline-block;
+}
+
+.fx-glitch::before,
+.fx-glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.fx-glitch::before {
+  color: #ff2bd6;
+  transform: translate(-2px, 0);
+  clip-path: inset(0 0 60% 0);
+  animation: glitch-slice-a calc(2.6s * var(--motion-scale, 1)) steps(1) infinite;
+}
+
+.fx-glitch::after {
+  color: #19f5ff;
+  transform: translate(2px, 0);
+  clip-path: inset(55% 0 0 0);
+  animation: glitch-slice-b calc(3.1s * var(--motion-scale, 1)) steps(1) infinite;
+}
+
+@keyframes glitch-slice-a {
+  0%,
+  86%,
+  100% {
+    clip-path: inset(0 0 100% 0);
+  }
+  88% {
+    clip-path: inset(10% 0 55% 0);
+    transform: translate(-3px, -1px);
+  }
+  92% {
+    clip-path: inset(60% 0 8% 0);
+    transform: translate(3px, 1px);
+  }
+  96% {
+    clip-path: inset(30% 0 40% 0);
+    transform: translate(-1px, 0);
+  }
+}
+
+@keyframes glitch-slice-b {
+  0%,
+  80%,
+  100% {
+    clip-path: inset(100% 0 0 0);
+  }
+  83% {
+    clip-path: inset(45% 0 30% 0);
+    transform: translate(3px, 1px);
+  }
+  89% {
+    clip-path: inset(5% 0 75% 0);
+    transform: translate(-2px, -1px);
+  }
+  94% {
+    clip-path: inset(70% 0 5% 0);
+    transform: translate(2px, 0);
+  }
+}
+
+.motion-off .fx-glitch::before,
+.motion-off .fx-glitch::after {
+  display: none;
+}
+
+/* ---------- Entrances & stagger ---------- */
+
+.app-shell[data-entrance='fade'] .frame {
+  animation-name: entrance-fade;
+}
+
+.app-shell[data-entrance='scan'] .frame {
+  animation-name: entrance-scan;
+}
+
+.app-shell[data-entrance='flicker'] .frame {
+  animation-name: entrance-flicker;
+  animation-timing-function: linear;
+}
+
+.app-shell[data-entrance='none'] .frame {
+  animation: none;
+}
+
+.app-shell:not([data-entrance='assemble']) .frame::before,
+.app-shell:not([data-entrance='assemble']) .frame::after,
+.app-shell:not([data-entrance='assemble']) .frame > .corner::before,
+.app-shell:not([data-entrance='assemble']) .frame > .corner::after {
+  animation-name: corner-fade;
+}
+
+.app-shell[data-entrance='none'] .frame::before,
+.app-shell[data-entrance='none'] .frame::after,
+.app-shell[data-entrance='none'] .frame > .corner::before,
+.app-shell[data-entrance='none'] .frame > .corner::after,
+.app-shell[data-entrance='none'] .frame-shape-line,
+.app-shell[data-entrance='none'] .frame-shape-accent {
+  animation: none;
+}
+
+@keyframes entrance-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes entrance-scan {
+  from {
+    clip-path: inset(0 0 100% 0);
+    filter: brightness(1.8);
+  }
+  60% {
+    clip-path: inset(0 0 0 0);
+    filter: brightness(1.4);
+  }
+  to {
+    clip-path: inset(0);
+    filter: brightness(1);
+  }
+}
+
+@keyframes entrance-flicker {
+  0% {
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.7;
+  }
+  14% {
+    opacity: 0.05;
+  }
+  30% {
+    opacity: 0.9;
+  }
+  34% {
+    opacity: 0.2;
+  }
+  52% {
+    opacity: 1;
+  }
+  56% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.app-shell[data-stagger='on'] .layout > *,
+.app-shell[data-stagger='on'] .hero > * {
+  animation-delay: calc(var(--stagger-index, 0) * 80ms * var(--motion-scale, 1));
+}
+
+.app-shell[data-stagger='on'] .hero > :nth-child(1) { --stagger-index: 3; }
+.app-shell[data-stagger='on'] .hero > :nth-child(2) { --stagger-index: 4; }
+.app-shell[data-stagger='on'] .hero > :nth-child(3) { --stagger-index: 5; }
+.app-shell[data-stagger='on'] .hero > :nth-child(4) { --stagger-index: 6; }
+.app-shell[data-stagger='on'] .hero > :nth-child(5) { --stagger-index: 7; }
+.app-shell[data-stagger='on'] .layout > :nth-child(4) { --stagger-index: 8; }
+.app-shell[data-stagger='on'] .layout > :nth-child(5) { --stagger-index: 9; }
+.app-shell[data-stagger='on'] .layout > :nth-child(6) { --stagger-index: 10; }
+.app-shell[data-stagger='on'] .layout > :nth-child(7) { --stagger-index: 11; }
+.app-shell[data-stagger='on'] .layout > :nth-child(8) { --stagger-index: 12; }
+.app-shell[data-stagger='on'] .layout > :nth-child(9) { --stagger-index: 13; }
+
+/* ---------- Chart styles ---------- */
+
+.chart-line-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: chart-draw calc(1400ms * var(--motion-scale, 1)) cubic-bezier(0.45, 0, 0.2, 1) forwards;
+}
+
+.chart-area-draw {
+  animation: entrance-fade calc(1400ms * var(--motion-scale, 1)) ease-out both;
+}
+
+.chart-line-bloom {
+  filter: blur(3px);
+}
+
+@keyframes chart-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ---------- Status rail ---------- */
+
+.hud-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-height: 30px;
+  padding: 0 20px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--surface-1) 82%, transparent);
+  border-bottom: 1px solid var(--neon-dim);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.hud-bar-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-right: 1px solid var(--neon-faint);
+  white-space: nowrap;
+}
+
+.hud-bar-system {
+  padding-left: 0;
+  color: var(--neon);
+}
+
+.hud-bar-clock {
+  margin-left: auto;
+  border-right: 0;
+  border-left: 1px solid var(--neon-faint);
+  padding-right: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.hud-bar-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--series-1);
+  box-shadow: 0 0 8px var(--series-1);
+  animation: hud-blink calc(1.4s * var(--motion-scale, 1)) steps(2, jump-none) infinite;
+}
+
+@keyframes hud-blink {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+/* ---------- Screen overlays ---------- */
+
+.fx-overlays {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.fx-overlays > span {
+  position: absolute;
+  inset: 0;
+}
+
+.fx-scanlines {
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, var(--scanline-alpha)) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+.fx-scanlines--light {
+  --scanline-alpha: 0.18;
+}
+
+.fx-scanlines--medium {
+  --scanline-alpha: 0.3;
+}
+
+.fx-scanlines--heavy {
+  --scanline-alpha: 0.45;
+}
+
+.fx-sweep {
+  height: 140px;
+  inset: 0 0 auto;
+  background: linear-gradient(to bottom, transparent, var(--neon-faint) 70%, var(--neon-dim) 99%, transparent);
+  opacity: 0.55;
+  animation: fx-sweep calc(7s * var(--motion-scale, 1)) linear infinite;
+}
+
+@keyframes fx-sweep {
+  from {
+    transform: translateY(-160px);
+  }
+  to {
+    transform: translateY(calc(100vh + 20px));
+  }
+}
+
+.fx-vignette {
+  background: radial-gradient(ellipse at center, transparent 52%, rgba(0, 0, 0, 0.72) 100%);
+}
+
+.fx-noise {
+  inset: -50%;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: fx-noise calc(0.5s * var(--motion-scale, 1)) steps(4) infinite;
+}
+
+@keyframes fx-noise {
+  25% {
+    transform: translate(-6%, 4%);
+  }
+  50% {
+    transform: translate(5%, -3%);
+  }
+  75% {
+    transform: translate(-3%, -5%);
+  }
+}
+
+.fx-flicker {
+  background: rgba(255, 255, 255, 0.025);
+  animation: fx-flicker calc(5s * var(--motion-scale, 1)) steps(1) infinite;
+}
+
+@keyframes fx-flicker {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  41% {
+    opacity: 1;
+  }
+  42% {
+    opacity: 0;
+  }
+  43% {
+    opacity: 0.8;
+  }
+  45% {
+    opacity: 0;
+  }
+  78% {
+    opacity: 0.6;
+  }
+  79% {
+    opacity: 0;
+  }
+}
+
+.fx-illuminator {
+  background: radial-gradient(
+    circle 300px at var(--pointer-x, 50%) var(--pointer-y, 30%),
+    var(--neon-faint),
+    transparent 70%
+  );
+  mix-blend-mode: screen;
+}
+
+/* ---------- Intro ---------- */
+
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background:
+    linear-gradient(var(--neon-faint) 1px, transparent 1px) 0 0 / 100% 4px,
+    color-mix(in srgb, var(--page) 94%, transparent);
+  animation: entrance-fade calc(240ms * var(--motion-scale, 1)) ease-out both;
+}
+
+.intro:focus {
+  outline: none;
+}
+
+.intro.is-leaving {
+  animation: intro-out calc(260ms * var(--motion-scale, 1)) ease-in forwards;
+}
+
+@keyframes intro-out {
+  to {
+    opacity: 0;
+    filter: brightness(2);
+  }
+}
+
+.intro-panel {
+  width: min(560px, 100%);
+  padding: 22px 24px;
+  border: 1px solid var(--neon-dim);
+  background: color-mix(in srgb, var(--surface-1) 90%, transparent);
+  box-shadow: 0 0 40px var(--neon-faint);
+}
+
+.intro-log {
+  min-height: 7.5em;
+  margin: 0 0 16px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  color: var(--neon);
+}
+
+.intro-caret,
+.intro-ellipsis::after {
+  display: inline-block;
+  animation: hud-blink calc(0.9s * var(--motion-scale, 1)) steps(2, jump-none) infinite;
+}
+
+.intro-caret {
+  width: 0.6em;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--neon);
+}
+
+.intro-ellipsis::after {
+  content: '…';
+}
+
+.intro-progress {
+  height: 4px;
+  background: var(--neon-faint);
+}
+
+.intro-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--neon);
+  box-shadow: 0 0 10px var(--neon-dim);
+  transition: width calc(300ms * var(--motion-scale, 1)) ease-out;
+}
+
+.intro-hint,
+.intro-status {
+  margin: 12px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.intro-transmission {
+  text-align: center;
+}
+
+.intro-status {
+  color: var(--text-secondary);
+}
+
+.intro-greeting {
+  margin: 0 0 6px;
+  font-size: 30px;
+  letter-spacing: 0.12em;
+  color: var(--neon);
+  text-shadow: 0 0 18px var(--neon-dim);
+}
+
+.intro-question {
+  margin: 0 0 20px;
+  color: var(--text-secondary);
+  letter-spacing: 0.08em;
+}
+
+.intro-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Settings drawer content ---------- */
+
+.settings-presets h3 {
+  margin: 14px 0 8px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.preset-options,
+.choice-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.settings-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.settings-tools .secondary-button {
+  flex: 1 1 auto;
+  padding: 8px 10px;
+}
+
+.secondary-button:disabled,
+.choice-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.settings-share-status:empty {
+  display: none;
+}
+
+.settings-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--neon-dim);
+}
+
+.settings-tabs [role='tab'] {
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 9px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.settings-tabs [role='tab']:hover,
+.settings-tabs [role='tab']:focus-visible {
+  color: var(--neon);
+  border-color: var(--neon-dim);
+  outline: none;
+}
+
+.settings-tabs [role='tab'][aria-selected='true'] {
+  color: var(--page);
+  background: var(--neon);
+  border-color: var(--neon);
+  font-weight: 650;
+}
+
+.axis {
+  min-width: 0;
+}
+
+.axis select {
+  width: 100%;
+  padding: 7px 10px;
+}
+
+.axis--toggle .switch-row {
+  margin-bottom: 0;
+  text-align: left;
+}
+
+.switch-row small {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.axis-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.axis-head output {
+  color: var(--neon);
+  font-variant-numeric: tabular-nums;
+}
+
+.axis input[type='range'] {
+  width: 100%;
+  accent-color: var(--neon);
+}
+
+.axis-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 6px;
+  font-size: 10px;
+}
+
+.settings-grid fieldset.axis {
+  padding: 12px;
+}
+
+.settings-actions {
+  position: sticky;
+  bottom: -22px;
+  margin: 14px -20px -22px;
+  padding: 12px 20px;
+  background: var(--surface-1);
+  border-top: 1px solid var(--neon-faint);
+}
+
+@media (min-width: 1100px) {
+  .app-shell.settings-open .layout {
+    margin-right: 440px;
+    margin-left: max(0px, calc((100vw - 440px - 1080px) / 2));
+  }
+}
+
+@media (max-width: 720px) {
+  .hud-bar {
+    padding: 0 12px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+  }
+
+  .hud-bar-optional,
+  .hud-bar-system {
+    display: none;
+  }
+
+  .hud-bar-cell:nth-child(2) {
+    padding-left: 0;
+  }
+
+  .gauge-ring-row .hero-number {
+    font-size: 34px;
+  }
+}
+
+/* Motion-off / reduced motion: hide continuously animated decoration. */
+.motion-off :is(.fx-sweep, .fx-flicker),
+.motion-off .hud-bar-dot,
+.motion-off .fx-noise {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-sweep,
+  .fx-flicker {
+    display: none;
+  }
+
+  .fx-noise,
+  .hud-bar-dot,
+  .fx-glitch::before,
+  .fx-glitch::after {
+    animation: none !important;
+  }
+
+  .fx-glitch::before,
+  .fx-glitch::after {
+    display: none;
   }
 }
