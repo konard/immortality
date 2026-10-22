@@ -1,11 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { BackgroundId, PaletteId } from '../settings';
+import { onSoundCue } from '../sound';
 
 interface StarfieldProps {
   mode?: BackgroundId;
   animated?: boolean;
   /** Re-tints the canvas when the palette (and so `--neon`) changes. */
   palette?: PaletteId;
+  /** Animation speed multiplier (1 = default); also scales the CSS grid drift. */
+  speed?: number;
 }
 
 type Rgb = [number, number, number];
@@ -59,9 +62,12 @@ function useReducedMotion(): boolean {
 }
 
 /** Configurable deep-space canvas with two CSS grid overlays. */
-export function Starfield({ mode = 'stars', animated = true, palette }: StarfieldProps) {
+export function Starfield({ mode = 'stars', animated = true, palette, speed = 1 }: StarfieldProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reducedMotion = useReducedMotion();
+  // Read through a ref so moving the speed slider does not rebuild the scene.
+  const speedRef = useRef(speed);
+  speedRef.current = speed;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -80,11 +86,19 @@ export function Starfield({ mode = 'stars', animated = true, palette }: Starfiel
     // Elapsed time in 60 fps frames, so drift speed does not depend on the display refresh rate.
     let lastTime = 0;
     let step = 1;
+    // Scene clock in ms, advanced by real time × speed so every mode honours the speed setting.
+    let clock = 0;
     let width = window.innerWidth;
     let height = window.innerHeight;
     let traces: Array<{ points: Array<[number, number]>; length: number; period: number; offset: number }> = [];
     let rain: Array<{ x: number; y: number; speed: number; glyphs: string[] }> = [];
     let bokeh: Array<{ x: number; y: number; radius: number; speed: number; phase: number }> = [];
+    let nodes: Array<{ x: number; y: number; vx: number; vy: number }> = [];
+    let warp: Array<{ angle: number; distance: number; speed: number }> = [];
+    // Sound resonance: rings spawned by interaction cues, plus the sparks they shed.
+    let ripples: Array<{ x: number; born: number; strength: number }> = [];
+    let sparks: Array<{ x: number; y: number; vx: number; vy: number; life: number }> = [];
+    let lastAmbient = 0;
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
@@ -111,6 +125,21 @@ export function Starfield({ mode = 'stars', animated = true, palette }: Starfiel
           speed: 0.6 + random() * 1.6,
           glyphs: Array.from({ length: 14 }, glyph),
         })).filter(() => random() < 0.65);
+      }
+      if (mode === 'constellation') {
+        nodes = Array.from({ length: Math.min(90, Math.floor((width * height) / 16000)) }, () => ({
+          x: random() * width,
+          y: random() * height,
+          vx: (random() - 0.5) * 0.25,
+          vy: (random() - 0.5) * 0.25,
+        }));
+      }
+      if (mode === 'warp') {
+        warp = Array.from({ length: 220 }, () => ({
+          angle: random() * Math.PI * 2,
+          distance: random(),
+          speed: 0.002 + random() * 0.006,
+        }));
       }
       if (mode === 'nebula') {
         bokeh = Array.from({ length: 42 }, () => ({
@@ -452,7 +481,7 @@ export function Starfield({ mode = 'stars', animated = true, palette }: Starfiel
         context.arc(dot.x, dot.y, dot.radius, 0, Math.PI * 2);
         context.fill();
         if (shouldAnimate) {
-          dot.y -= dot.speed;
+          dot.y -= dot.speed * step;
           if (dot.y < -dot.radius) dot.y = height + dot.radius;
         }
       }
@@ -471,11 +500,327 @@ export function Starfield({ mode = 'stars', animated = true, palette }: Starfiel
       context.fillRect(0, horizon - 60, width, 120);
     };
 
+    // Aurora curtains: vertical light bands whose crest follows slow travelling sine waves.
+    const drawAurora = (time: number) => {
+      drawStars(time, 0.22);
+      const t = time / 1000;
+      const bands: Array<[Rgb, number, number]> = [
+        [neon, 0.32, 0.16],
+        [accent, 0.42, 0.08],
+        [neon, 0.24, 0.1],
+      ];
+      bands.forEach(([color, baseline, alpha], band) => {
+        for (let x = 0; x < width; x += 6) {
+          const crest =
+            height * baseline +
+            Math.sin(x / 180 + t * 0.35 + band * 2) * 40 +
+            Math.sin(x / 67 - t * 0.6 + band) * 14;
+          const length = 120 + 70 * (0.5 + 0.5 * Math.sin(x / 120 + t * 0.5 + band * 1.7));
+          const curtain = context.createLinearGradient(0, crest, 0, crest + length);
+          curtain.addColorStop(0, tint(0, color));
+          curtain.addColorStop(0.25, tint(alpha, color));
+          curtain.addColorStop(1, tint(0, color));
+          context.fillStyle = curtain;
+          context.fillRect(x, crest, 6, length);
+        }
+      });
+    };
+
+    // Warp: stars streaking out of a vanishing point, longer as they accelerate.
+    const drawWarp = () => {
+      const cx = width / 2;
+      const cy = height / 2;
+      const reach = Math.hypot(cx, cy);
+      context.lineCap = 'round';
+      for (const star of warp) {
+        const near = star.distance * star.distance;
+        const r = near * reach;
+        const tail = Math.min(r, 4 + near * 90);
+        const cos = Math.cos(star.angle);
+        const sin = Math.sin(star.angle);
+        context.strokeStyle = tint(0.08 + near * 0.7, near > 0.6 ? [235, 250, 255] : neon);
+        context.lineWidth = 0.6 + near * 1.6;
+        context.beginPath();
+        context.moveTo(cx + cos * (r - tail), cy + sin * (r - tail));
+        context.lineTo(cx + cos * r, cy + sin * r);
+        context.stroke();
+        if (shouldAnimate) {
+          star.distance += star.speed * step * (0.4 + star.distance);
+          if (star.distance > 1.05) star.distance = Math.random() * 0.08;
+        }
+      }
+    };
+
+    // Honeycomb lattice with a highlight band sweeping diagonally across it.
+    const drawHexagons = (time: number) => {
+      const size = 26;
+      const w = Math.sqrt(3) * size;
+      const h = 1.5 * size;
+      const sweep = shouldAnimate ? ((time / 6000) % 1) * (width + height + 400) - 200 : width * 0.5;
+      context.lineWidth = 1;
+      for (let row = -1; row * h < height + size; row++) {
+        for (let col = -1; col * w < width + w; col++) {
+          const x = col * w + (row % 2 ? w / 2 : 0);
+          const y = row * h;
+          const lit = Math.max(0, 1 - Math.abs(x + y - sweep) / 160);
+          context.strokeStyle = tint(0.06 + lit * 0.4);
+          context.beginPath();
+          for (let k = 0; k < 6; k++) {
+            const angle = (Math.PI / 3) * k + Math.PI / 6;
+            const px = x + Math.cos(angle) * (size - 2);
+            const py = y + Math.sin(angle) * (size - 2);
+            if (k === 0) context.moveTo(px, py);
+            else context.lineTo(px, py);
+          }
+          context.closePath();
+          context.stroke();
+          if (lit > 0.6) {
+            context.fillStyle = tint((lit - 0.6) * 0.12);
+            context.fill();
+          }
+        }
+      }
+    };
+
+    // Radar scope: range rings, a rotating sweep and blips that fade after the beam passes.
+    const drawRadar = (time: number) => {
+      drawStars(time, 0.16);
+      const cx = width * 0.78;
+      const cy = height * 0.68;
+      const radius = Math.max(220, Math.min(width, height) * 0.46);
+      const angle = shouldAnimate ? (time / 4000) * Math.PI * 2 : -0.6;
+      context.lineWidth = 1;
+      for (let ring = 1; ring <= 4; ring++) {
+        context.strokeStyle = tint(0.1);
+        context.beginPath();
+        context.arc(cx, cy, (radius * ring) / 4, 0, Math.PI * 2);
+        context.stroke();
+      }
+      context.strokeStyle = tint(0.07);
+      context.beginPath();
+      context.moveTo(cx - radius, cy);
+      context.lineTo(cx + radius, cy);
+      context.moveTo(cx, cy - radius);
+      context.lineTo(cx, cy + radius);
+      context.stroke();
+      const trail = 0.9;
+      for (let k = 0; k < 24; k++) {
+        const a0 = angle - (trail * k) / 24;
+        context.fillStyle = tint(0.16 * (1 - k / 24));
+        context.beginPath();
+        context.moveTo(cx, cy);
+        context.arc(cx, cy, radius, a0 - trail / 24, a0);
+        context.closePath();
+        context.fill();
+      }
+      const random = seededRandom(211);
+      for (let i = 0; i < 14; i++) {
+        const blipAngle = random() * Math.PI * 2;
+        const blipDistance = (0.15 + random() * 0.8) * radius;
+        const since = (((angle - blipAngle) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+        const alpha = Math.max(0, 1 - since / 3.5);
+        context.fillStyle = tint(0.05 + alpha * 0.85);
+        context.beginPath();
+        context.arc(cx + Math.cos(blipAngle) * blipDistance, cy + Math.sin(blipAngle) * blipDistance, 2.2, 0, Math.PI * 2);
+        context.fill();
+      }
+    };
+
+    // Constellation: drifting nodes joined by lines that fade with distance.
+    const drawConstellation = (time: number) => {
+      drawStars(time, 0.18);
+      const link = 150;
+      context.lineWidth = 1;
+      for (let i = 0; i < nodes.length; i++) {
+        const a = nodes[i];
+        for (let j = i + 1; j < nodes.length; j++) {
+          const b = nodes[j];
+          const distance = Math.hypot(a.x - b.x, a.y - b.y);
+          if (distance > link) continue;
+          context.strokeStyle = tint((1 - distance / link) * 0.28);
+          context.beginPath();
+          context.moveTo(a.x, a.y);
+          context.lineTo(b.x, b.y);
+          context.stroke();
+        }
+      }
+      for (const node of nodes) {
+        context.fillStyle = tint(0.75);
+        context.beginPath();
+        context.arc(node.x, node.y, 1.6, 0, Math.PI * 2);
+        context.fill();
+        if (shouldAnimate) {
+          node.x += node.vx * step;
+          node.y += node.vy * step;
+          if (node.x < 0 || node.x > width) node.vx *= -1;
+          if (node.y < 0 || node.y > height) node.vy *= -1;
+        }
+      }
+    };
+
+    // Arwes "GridLines": dashed horizontals over solid verticals, the dashes slowly marching.
+    const drawGridLines = (time: number) => {
+      const distance = 30;
+      context.lineWidth = 1;
+      context.strokeStyle = tint(0.07);
+      context.setLineDash([]);
+      context.beginPath();
+      for (let x = distance / 2; x < width; x += distance) {
+        context.moveTo(x, 0);
+        context.lineTo(x, height);
+      }
+      context.stroke();
+      context.strokeStyle = tint(0.12);
+      context.setLineDash([4, 4]);
+      context.lineDashOffset = shouldAnimate ? -(time / 120) % 8 : 0;
+      context.beginPath();
+      for (let y = distance / 2; y < height; y += distance) {
+        context.moveTo(0, y);
+        context.lineTo(width, y);
+      }
+      context.stroke();
+      context.setLineDash([]);
+      context.lineDashOffset = 0;
+    };
+
+    // Soul Extract-style signal rails: a fine scanline field, dotted column rails, solid row
+    // rails and lights running along them under a soft corner glow.
+    const drawRails = (time: number) => {
+      const glow = context.createRadialGradient(
+        width * 0.25,
+        height * 0.25,
+        0,
+        width * 0.25,
+        height * 0.25,
+        Math.max(width, height) * 0.6,
+      );
+      glow.addColorStop(0, tint(0.09));
+      glow.addColorStop(1, tint(0));
+      context.fillStyle = glow;
+      context.fillRect(0, 0, width, height);
+      context.fillStyle = tint(0.025);
+      for (let y = 0; y < height; y += 10) context.fillRect(0, y, width, 1);
+      context.lineWidth = 1;
+      context.strokeStyle = tint(0.13);
+      context.setLineDash([3, 7]);
+      context.beginPath();
+      for (let x = 100; x < width; x += 100) {
+        context.moveTo(x + 0.5, 0);
+        context.lineTo(x + 0.5, height);
+      }
+      context.stroke();
+      context.setLineDash([]);
+      context.strokeStyle = tint(0.08);
+      context.beginPath();
+      for (let y = 200; y < height; y += 200) {
+        context.moveTo(0, y + 0.5);
+        context.lineTo(width, y + 0.5);
+      }
+      context.stroke();
+      if (!shouldAnimate) return;
+      const random = seededRandom(331);
+      const columns = Math.floor(width / 100);
+      for (let column = 1; column <= columns; column++) {
+        if (random() > 0.45) continue;
+        const period = 3800 + random() * 5200;
+        const y = (((time + random() * period) % period) / period) * (height + 160) - 80;
+        const light = context.createLinearGradient(0, y - 80, 0, y);
+        light.addColorStop(0, tint(0));
+        light.addColorStop(1, tint(0.7));
+        context.fillStyle = light;
+        context.fillRect(column * 100, y - 80, 1.5, 80);
+      }
+      const rows = Math.floor(height / 200);
+      for (let row = 1; row <= rows; row++) {
+        const period = 6000 + random() * 6000;
+        const x = (((time + random() * period) % period) / period) * (width + 240) - 120;
+        const light = context.createLinearGradient(x - 120, 0, x, 0);
+        light.addColorStop(0, tint(0));
+        light.addColorStop(1, tint(0.6));
+        context.fillStyle = light;
+        context.fillRect(x - 120, row * 200, 120, 1.5);
+      }
+    };
+
+    // glitchy.website-style sound resonance: a slowly breathing ring that sends out ripples
+    // and sparks whenever the interface makes a sound (and a quiet ambient pulse otherwise).
+    const drawResonance = (time: number) => {
+      drawStars(time, 0.16);
+      const cy = height * 0.55;
+      const base = Math.min(width, height) * 0.18;
+      context.lineWidth = 1;
+      context.strokeStyle = tint(0.22);
+      context.beginPath();
+      for (let k = 0; k <= 180; k++) {
+        const angle = (k / 180) * Math.PI * 2;
+        const wobble = shouldAnimate
+          ? Math.sin(angle * 6 + time / 700) * 3 + Math.sin(angle * 11 - time / 460) * 1.5
+          : 0;
+        const x = width / 2 + Math.cos(angle) * (base + wobble);
+        const y = cy + Math.sin(angle) * (base + wobble);
+        if (k === 0) context.moveTo(x, y);
+        else context.lineTo(x, y);
+      }
+      context.stroke();
+      if (!shouldAnimate) return;
+      if (time - lastAmbient > 2500) {
+        lastAmbient = time;
+        ripples.push({ x: width / 2, born: time, strength: 0.35 });
+      }
+      const life = 2600;
+      ripples = ripples.filter((ripple) => time - ripple.born < life);
+      for (const ripple of ripples) {
+        const t = (time - ripple.born) / life;
+        const radius = base + t * Math.max(width, height) * 0.55;
+        context.strokeStyle = tint((1 - t) * 0.5 * ripple.strength);
+        context.lineWidth = 1 + (1 - t) * 1.5;
+        context.beginPath();
+        context.arc(ripple.x, cy, radius, 0, Math.PI * 2);
+        context.stroke();
+      }
+      sparks = sparks.filter((spark) => spark.life > 0);
+      for (const spark of sparks) {
+        context.fillStyle = tint(spark.life * 0.8);
+        context.fillRect(spark.x, spark.y, 1.6, 1.6);
+        spark.x += spark.vx * step;
+        spark.y += spark.vy * step;
+        spark.life -= 0.012 * step;
+      }
+    };
+
+    const resonate = (pan: number, strength: number) => {
+      if (!shouldAnimate || ripples.length > 24) return;
+      const x = width / 2 + pan * width * 0.3;
+      ripples.push({ x, born: clock, strength });
+      const base = Math.min(width, height) * 0.18;
+      for (let i = 0; i < 10; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.6 + Math.random() * 1.6;
+        sparks.push({
+          x: x + Math.cos(angle) * base,
+          y: height * 0.55 + Math.sin(angle) * base,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1,
+        });
+      }
+      if (sparks.length > 240) sparks = sparks.slice(-240);
+    };
+
     const draw = (time: number) => {
-      step = lastTime ? Math.min(4, (time - lastTime) / (1000 / 60)) : 1;
+      const elapsed = lastTime ? Math.min(66, time - lastTime) : 1000 / 60;
       lastTime = time;
+      const rate = Math.max(0, speedRef.current);
+      step = (elapsed / (1000 / 60)) * rate;
+      clock += elapsed * rate;
+      time = shouldAnimate ? clock : 0;
       context.clearRect(0, 0, width, height);
       if (mode === 'galaxy') drawGalaxy(time);
+      else if (mode === 'aurora') drawAurora(time);
+      else if (mode === 'warp') drawWarp();
+      else if (mode === 'hexagons') drawHexagons(time);
+      else if (mode === 'radar') drawRadar(time);
+      else if (mode === 'constellation') drawConstellation(time);
       else if (mode === 'dots') drawDots(time);
       else if (mode === 'moving-lines') drawMovingLines(time);
       else if (mode === 'puffs') drawPuffs(time);
@@ -485,6 +830,9 @@ export function Starfield({ mode = 'stars', animated = true, palette }: Starfiel
       else if (mode === 'planet-orbit') drawPlanet(time);
       else if (mode === 'star-orbit') drawSun(time);
       else if (mode === 'asteroids') drawAsteroids(time);
+      else if (mode === 'grid-lines') drawGridLines(time);
+      else if (mode === 'rails') drawRails(time);
+      else if (mode === 'resonance') drawResonance(time);
       else drawStars(time, mode === 'stars' ? 0.35 : 0.18);
       if (shouldAnimate) frame = requestAnimationFrame(draw);
     };
@@ -498,15 +846,28 @@ export function Starfield({ mode = 'stars', animated = true, palette }: Starfiel
     window.addEventListener('resize', onResize);
     if (shouldAnimate) frame = requestAnimationFrame(draw);
     else draw(0);
+    // Hover cues are frequent and soft; clicks, toggles and notifications ring out harder.
+    const unsubscribe =
+      mode === 'resonance'
+        ? onSoundCue(({ event, pan }) =>
+            resonate(pan, event === 'hover' || event === 'type' ? 0.45 : 1),
+          )
+        : undefined;
 
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener('resize', onResize);
+      unsubscribe?.();
     };
   }, [animated, mode, palette, reducedMotion]);
 
   return (
-    <div className={`space-backdrop space-backdrop--${mode}`} aria-hidden="true">
+    <div
+      className={`space-backdrop space-backdrop--${mode}`}
+      style={{ '--bg-speed': Math.max(0.05, speed) } as CSSProperties}
+      data-frozen={speed <= 0 ? 'true' : undefined}
+      aria-hidden="true"
+    >
       <canvas ref={canvasRef} className="starfield" />
       {(mode === 'square-grid' || mode === 'perspective-grid') && <span className="backdrop-grid" />}
     </div>

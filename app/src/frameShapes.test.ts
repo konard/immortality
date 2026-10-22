@@ -39,6 +39,13 @@ describe('frame shapes', () => {
     );
   });
 
+  it('brackets all four nero corners on a square box', () => {
+    const { shape, accents } = frameGeometry('nero', 200, 100, 10);
+    expect(shape).toBe('M0.5,0.5 L199.5,0.5 L199.5,99.5 L0.5,99.5 Z');
+    expect(accents).toHaveLength(4);
+    expect(accents[0]).toBe('M0.5,16.5 L0.5,0.5 L16.5,0.5');
+  });
+
   it('clamps the cut on tiny panels', () => {
     const { shape } = frameGeometry('octagon', 40, 20, 30);
     expect(shape.startsWith('M5.5,0.5')).toBe(true);

@@ -1,23 +1,34 @@
 import { describe, expect, it } from 'vitest';
-import { PRESET_SPECS, sounds } from './sound';
+import { SOUND_SPECS, chooseSounds, sounds } from './sound';
 import {
   AXES,
   AXIS_BY_KEY,
   DEFAULT_SETTINGS,
+  LEGACY_SETTINGS_STORAGE_KEY,
+  LEGACY_V1_BASE,
+  LEGACY_V1_LOOK,
+  MAX_SOUNDS_PER_EVENT,
   PRESETS,
   REFERENCES,
+  SETTINGS_STORAGE_KEY,
   SETTING_GROUPS,
+  SHARE_VERSION,
+  SOUNDS,
   SOUND_EVENTS,
-  SOUND_PRESETS,
+  SURFACES,
   applyPreset,
+  coerceSoundList,
+  migrateLegacySettings,
   applySharedLook,
   countCustomized,
   decodeShareHash,
   diffFromDefaults,
   encodeShareHash,
   isPresetActive,
+  loadSettings,
   parseStoredSettings,
   randomizeSettings,
+  saveSettings,
   type UiSettings,
 } from './settings';
 
@@ -29,43 +40,35 @@ function seeded(seed: number): () => number {
   };
 }
 
+const ISSUE_7_LINK =
+  '#ui=%7B%22palette%22%3A%22poseidon%22%2C%22glow%22%3A%22medium%22%2C%22surface%22%3A%22transparent%22' +
+  '%2C%22density%22%3A%22spacious%22%2C%22meter%22%3A%22segmented%22%2C%22font%22%3A%22orbitron%22' +
+  '%2C%22textEffect%22%3A%22sequence%22%2C%22background%22%3A%22perspective-grid%22%2C%22statusBar%22' +
+  '%3Atrue%2C%22intro%22%3A%22boot%22%2C%22chartStyle%22%3A%22area%22%2C%22chartGrid%22%3A%22dashed%22' +
+  '%2C%22entrance%22%3A%22scan%22%2C%22stagger%22%3Atrue%7D';
+
 describe('UI settings', () => {
-  it('keeps the existing look while enabling sound and motion by default', () => {
+  it('uses the default look requested in issue #7', () => {
     expect(DEFAULT_SETTINGS).toMatchObject({
-      palette: 'mission',
-      background: 'stars',
+      palette: 'poseidon',
+      glow: 'medium',
+      surface: 'transparent',
+      density: 'spacious',
+      meter: 'segmented',
+      font: 'orbitron',
+      textEffect: 'sequence',
+      background: 'perspective-grid',
+      statusBar: true,
+      intro: 'boot',
+      chartStyle: 'area',
+      chartGrid: 'dashed',
+      entrance: 'scan',
+      stagger: true,
       animations: true,
       sound: true,
-      effects: {
-        hover: 'spark',
-        activate: 'confirm',
-        select: 'transmit',
-        scan: 'scanner',
-      },
     });
-    // Every new axis is opt-in: the defaults reproduce the original dashboard.
-    expect(DEFAULT_SETTINGS).toMatchObject({
-      glow: 'light',
-      frame: 'corners',
-      surface: 'gradient',
-      font: 'system',
-      textEffect: 'none',
-      scanlines: 'off',
-      scanSweep: false,
-      vignette: false,
-      flicker: false,
-      noise: false,
-      illuminator: false,
-      statusBar: false,
-      intro: 'none',
-      chartStyle: 'line',
-      chartGrid: 'solid',
-      entrance: 'assemble',
-      stagger: false,
-      animationSpeed: 100,
-      backgroundIntensity: 100,
-      volume: 100,
-    });
+    // The link from the issue (an unversioned first-release link) decodes to exactly the defaults.
+    expect(decodeShareHash(ISSUE_7_LINK)).toEqual(DEFAULT_SETTINGS);
     expect(sounds.isEnabled()).toBe(true);
   });
 
@@ -96,13 +99,39 @@ describe('UI settings', () => {
     }
   });
 
-  it('provides a direct reference or source link and a synth for every audible preset', () => {
-    for (const preset of SOUND_PRESETS.filter(({ id }) => id !== 'silent')) {
-      expect(preset.sourceUrl).toMatch(/^https:\/\//);
-      expect(PRESET_SPECS[preset.id]).not.toBeNull();
+  it('names sounds by character, not by the action they play on', () => {
+    const actions = SOUND_EVENTS.flatMap(({ id, label }) => [id, ...label.toLowerCase().split(/\W+/)]);
+    const actionWords = new Set([...actions, 'click', 'confirm', 'select', 'scanner', 'typing', 'deploy']);
+    expect(new Set(SOUNDS.map(({ id }) => id)).size).toBe(SOUNDS.length);
+    for (const sound of SOUNDS) {
+      expect(actionWords.has(sound.id)).toBe(false);
+      expect(sound.sourceUrl).toMatch(/^https:\/\//);
+      expect(SOUND_SPECS[sound.id].voices.length).toBeGreaterThan(0);
     }
-    expect(PRESET_SPECS.silent).toBeNull();
-    for (const { id } of SOUND_EVENTS) expect(DEFAULT_SETTINGS.effects[id]).toBeDefined();
+    expect(Object.keys(SOUND_SPECS).sort()).toEqual(SOUNDS.map(({ id }) => id).sort());
+  });
+
+  it('maps one or more sounds to every interaction', () => {
+    for (const { id } of SOUND_EVENTS) {
+      const list = DEFAULT_SETTINGS.effects[id];
+      expect(Array.isArray(list)).toBe(true);
+      expect(list.length).toBeLessThanOrEqual(MAX_SOUNDS_PER_EVENT);
+    }
+    expect(DEFAULT_SETTINGS.effects.activate.length).toBeGreaterThan(1);
+  });
+
+  it('normalizes sound lists, including first-release single sound ids', () => {
+    expect(coerceSoundList('confirm')).toEqual(['cobalt']);
+    expect(coerceSoundList('silent')).toEqual([]);
+    expect(coerceSoundList('missing')).toBeUndefined();
+    expect(coerceSoundList(['halo', 'halo', 'nope', 'spark', 7])).toEqual(['halo', 'quartz']);
+    expect(coerceSoundList(SOUNDS.map(({ id }) => id))).toHaveLength(MAX_SOUNDS_PER_EVENT);
+    expect(coerceSoundList({})).toBeUndefined();
+    // Inherited object keys are not first-release sound ids.
+    for (const key of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) {
+      expect(coerceSoundList(key)).toBeUndefined();
+      expect(coerceSoundList([key, 'halo'])).toEqual(['halo']);
+    }
   });
 
   it('merges a valid saved preference with new defaults', () => {
@@ -113,36 +142,59 @@ describe('UI settings', () => {
     });
   });
 
-  it('upgrades settings saved before the new axes existed', () => {
-    const legacy = JSON.stringify({
-      palette: 'amber',
-      background: 'galaxy',
-      animations: false,
+  it('migrates first-release storage, keeping only what the visitor changed', () => {
+    const untouched = JSON.stringify({
+      ...LEGACY_V1_LOOK,
+      animations: true,
       sound: true,
-      effects: { hover: 'soft', activate: 'confirm', select: 'transmit', scan: 'scanner' },
+      effects: { hover: 'spark', activate: 'confirm', select: 'transmit', scan: 'scanner' },
     });
-    expect(parseStoredSettings(legacy)).toEqual({
+    expect(migrateLegacySettings(untouched)).toEqual(DEFAULT_SETTINGS);
+    const customized = JSON.stringify({
+      ...LEGACY_V1_LOOK,
+      palette: 'amber',
+      animations: false,
+      effects: { hover: 'soft', activate: 'confirm', select: 'transmit', scan: 'silent' },
+    });
+    expect(migrateLegacySettings(customized)).toEqual({
       ...DEFAULT_SETTINGS,
       palette: 'amber',
-      background: 'galaxy',
       animations: false,
-      effects: { ...DEFAULT_SETTINGS.effects, hover: 'soft' },
+      effects: { ...DEFAULT_SETTINGS.effects, hover: ['halo'], scan: [] },
     });
+    expect(migrateLegacySettings('not-json')).toEqual(DEFAULT_SETTINGS);
+    expect(migrateLegacySettings(null)).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it('keeps first-release storage until the migrated look is saved', () => {
+    const items = new Map<string, string>([
+      [LEGACY_SETTINGS_STORAGE_KEY, JSON.stringify({ ...LEGACY_V1_LOOK, palette: 'amber' })],
+    ]);
+    const storage = {
+      getItem: (key: string) => items.get(key) ?? null,
+      setItem: (key: string, value: string) => void items.set(key, value),
+      removeItem: (key: string) => void items.delete(key),
+    };
+    // React StrictMode runs state initializers twice; both reads must see the migration.
+    const first = loadSettings(storage);
+    expect(first.palette).toBe('amber');
+    expect(loadSettings(storage)).toEqual(first);
+    saveSettings(storage, first);
+    expect(items.has(LEGACY_SETTINGS_STORAGE_KEY)).toBe(false);
+    expect(JSON.parse(items.get(SETTINGS_STORAGE_KEY)!)).toEqual(first);
+    expect(loadSettings(storage)).toEqual(first);
   });
 
   it('rejects invalid and stale saved values without breaking the UI', () => {
     expect(
       parseStoredSettings(
         '{"palette":"removed","background":"black-hole","animations":"yes",' +
-          '"glow":42,"cornerSize":"big","volume":null,' +
-          '"effects":{"hover":"missing","activate":"soft"}}'
+          '"glow":42,"cornerSize":"big","volume":null,"surface":"plywood",' +
+          '"effects":{"hover":"missing","activate":["halo"]}}'
       )
     ).toEqual({
       ...DEFAULT_SETTINGS,
-      effects: {
-        ...DEFAULT_SETTINGS.effects,
-        activate: 'soft',
-      },
+      effects: { ...DEFAULT_SETTINGS.effects, activate: ['halo'] },
     });
     expect(parseStoredSettings('not-json')).toEqual(DEFAULT_SETTINGS);
     expect(parseStoredSettings('null')).toEqual(DEFAULT_SETTINGS);
@@ -150,10 +202,49 @@ describe('UI settings', () => {
   });
 
   it('clamps out-of-range numeric values', () => {
-    const parsed = parseStoredSettings('{"cornerSize":999,"volume":-5,"animationSpeed":1}');
+    const parsed = parseStoredSettings(
+      '{"cornerSize":999,"volume":-5,"animationSpeed":1,"surfaceOpacity":400,"fontScale":1}'
+    );
     expect(parsed.cornerSize).toBe(32);
     expect(parsed.volume).toBe(0);
     expect(parsed.animationSpeed).toBe(25);
+    const opacity = AXIS_BY_KEY.surfaceOpacity;
+    const scale = AXIS_BY_KEY.fontScale;
+    if (opacity.kind !== 'range' || scale.kind !== 'range') throw new Error('range axes expected');
+    expect(parsed.surfaceOpacity).toBe(opacity.max);
+    expect(parsed.fontScale).toBe(scale.min);
+  });
+
+  it('offers wood, metals and other materials with a configurable opacity', () => {
+    const surfaces = SURFACES.map(({ id }) => id as string);
+    for (const id of ['glass', 'solid', 'transparent', 'wood', 'steel', 'carbon', 'marble']) {
+      expect(surfaces).toContain(id);
+    }
+    expect(AXIS_BY_KEY.surfaceOpacity.kind).toBe('range');
+    expect(AXIS_BY_KEY.surfaceBlur.kind).toBe('range');
+  });
+});
+
+describe('sound selection', () => {
+  it('picks according to the multi-sound mode', () => {
+    const list = ['quartz', 'halo', 'nova'] as const;
+    expect(chooseSounds([], 'random', 0)).toEqual([]);
+    expect(chooseSounds(list, 'layer', 0)).toEqual([...list]);
+    expect([0, 1, 2, 3].map((turn) => chooseSounds(list, 'cycle', turn)[0])).toEqual([
+      'quartz',
+      'halo',
+      'nova',
+      'quartz',
+    ]);
+    expect(chooseSounds(list, 'random', 0, () => 0.99)).toEqual(['nova']);
+  });
+
+  it('never repeats the previous random pick when there is a choice', () => {
+    const list = ['quartz', 'halo'] as const;
+    for (const value of [0, 0.3, 0.6, 0.99]) {
+      expect(chooseSounds(list, 'random', 0, () => value, 'quartz')).toEqual(['halo']);
+    }
+    expect(chooseSounds(['ion'], 'random', 0, () => 0.5, 'ion')).toEqual(['ion']);
   });
 });
 
@@ -203,10 +294,21 @@ describe('share links and randomizer', () => {
     const custom: UiSettings = {
       ...DEFAULT_SETTINGS,
       glow: 'heavy',
-      effects: { ...DEFAULT_SETTINGS.effects, hover: 'pulse' },
+      effects: { ...DEFAULT_SETTINGS.effects, hover: ['tide', 'halo'] },
     };
-    expect(diffFromDefaults(custom)).toEqual({ glow: 'heavy', effects: { hover: 'pulse' } });
+    expect(diffFromDefaults(custom)).toEqual({ glow: 'heavy', effects: { hover: ['tide', 'halo'] } });
     expect(countCustomized(custom)).toBe(2);
+    const hash = encodeShareHash(custom);
+    expect(JSON.parse(decodeURIComponent(hash.slice(4))).v).toBe(SHARE_VERSION);
+  });
+
+  it('keeps first-release share links showing the look that was shared', () => {
+    const legacy = '#ui=' + encodeURIComponent(JSON.stringify({ glow: 'heavy', effects: { hover: 'pulse' } }));
+    expect(decodeShareHash(legacy)).toEqual({
+      ...LEGACY_V1_BASE,
+      glow: 'heavy',
+      effects: { ...LEGACY_V1_BASE.effects, hover: ['tide'] },
+    });
   });
 
   it('applies a shared look without overriding the viewer motion and audio choices', () => {
@@ -222,7 +324,13 @@ describe('share links and randomizer', () => {
     expect(decodeShareHash('')).toBeNull();
     expect(decodeShareHash('#methodology')).toBeNull();
     expect(decodeShareHash('#ui=%7Bbroken')).toBeNull();
-    expect(decodeShareHash('#ui=%7B%22palette%22%3A%22nope%22%7D')).toEqual(DEFAULT_SETTINGS);
+    expect(decodeShareHash('#ui=%7B%22v%22%3A2%2C%22palette%22%3A%22nope%22%7D')).toEqual(DEFAULT_SETTINGS);
+    expect(decodeShareHash('#ui=%7B%22palette%22%3A%22nope%22%7D')).toEqual(LEGACY_V1_BASE);
+    const crafted = { v: 2, palette: 'constructor', effects: { hover: 'constructor', open: ['toString'] } };
+    expect(decodeShareHash('#ui=' + encodeURIComponent(JSON.stringify(crafted)))).toEqual({
+      ...DEFAULT_SETTINGS,
+      effects: { ...DEFAULT_SETTINGS.effects, open: [] },
+    });
   });
 
   it('randomizes visual axes deterministically and keeps comfort settings', () => {

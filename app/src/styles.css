@@ -129,7 +129,7 @@ body {
   background-size: 44px 44px;
   -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.25), #000);
   mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.25), #000);
-  animation: square-grid-drift 14s linear infinite;
+  animation: square-grid-drift calc(14s / var(--bg-speed, 1)) linear infinite;
 }
 
 .space-backdrop--perspective-grid .backdrop-grid {
@@ -142,7 +142,12 @@ body {
   transform-origin: center top;
   -webkit-mask-image: linear-gradient(to bottom, transparent, #000 35%, #000);
   mask-image: linear-gradient(to bottom, transparent, #000 35%, #000);
-  animation: horizon-grid-drift 2.8s linear infinite;
+  animation: horizon-grid-drift calc(2.8s / var(--bg-speed, 1)) linear infinite;
+}
+
+/* Background speed 0% freezes the CSS grids too, like the canvas scenes. */
+.space-backdrop[data-frozen] .backdrop-grid {
+  animation-play-state: paused;
 }
 
 @keyframes square-grid-drift {
@@ -241,10 +246,14 @@ body {
 
 .frame {
   position: relative;
-  background: linear-gradient(160deg, var(--surface-2), var(--surface-1));
-  border: 1px solid var(--neon-faint);
+  isolation: isolate;
+  background: transparent;
+  border: var(--border-width, 1px) solid var(--neon-faint);
   padding: 18px 20px;
-  animation: frame-reveal calc(520ms * var(--motion-scale, 1)) cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* backwards, not both: a kept clip-path/transform would clip the corner glows and
+     cut the backdrop blur off from the scene once the entrance has finished. */
+  animation: frame-reveal calc(520ms * var(--motion-scale, 1)) cubic-bezier(0.22, 1, 0.36, 1)
+    backwards;
 }
 
 .frame::before,
@@ -258,7 +267,8 @@ body {
   border: 0 solid var(--neon);
   filter: drop-shadow(0 0 4px var(--neon-dim));
   pointer-events: none;
-  animation: corner-draw calc(720ms * var(--motion-scale, 1)) cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: corner-draw calc(720ms * var(--motion-scale, 1)) cubic-bezier(0.22, 1, 0.36, 1)
+    backwards;
 }
 
 @keyframes frame-reveal {
@@ -345,22 +355,6 @@ body {
   color: var(--text-muted);
 }
 
-.filters select {
-  font: inherit;
-  font-size: 13px;
-  color: var(--text-primary);
-  background: var(--surface-2);
-  border: 1px solid var(--neon-dim);
-  padding: 8px 12px;
-  cursor: pointer;
-}
-
-.filters select:hover,
-.filters select:focus-visible {
-  border-color: var(--neon);
-  outline: none;
-}
-
 .range-group {
   display: flex;
   gap: 0;
@@ -408,6 +402,7 @@ body {
 }
 
 .hero-number {
+  white-space: nowrap;
   font-size: 54px;
   font-weight: 650;
   line-height: 1.05;
@@ -475,6 +470,28 @@ body {
   color: var(--text-secondary);
 }
 
+/* Inline sparkline of the tile's recent history (thegridcn dashboard stat cards). */
+.stat-spark {
+  display: block;
+  width: 100%;
+  height: 28px;
+  margin-top: 8px;
+  overflow: visible;
+}
+
+.stat-spark-area {
+  fill: color-mix(in srgb, var(--neon) 14%, transparent);
+  stroke: none;
+}
+
+.stat-spark-line {
+  fill: none;
+  stroke: var(--neon);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
 .delta-up {
   color: #0ca30c;
 }
@@ -499,8 +516,9 @@ body {
 .chart-tooltip {
   position: absolute;
   pointer-events: none;
-  background: rgba(10, 16, 24, 0.94);
+  background: var(--material), color-mix(in srgb, var(--surface-1) 94%, transparent);
   border: 1px solid var(--neon-dim);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
   padding: 7px 10px;
   font-size: 12px;
   color: var(--text-secondary);
@@ -552,40 +570,17 @@ body {
 
 /* ---------- Table view & methodology ---------- */
 
-details.panel-details summary {
-  cursor: pointer;
-  font-size: 12px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  padding: 4px 0;
-}
-
-details.panel-details summary:hover {
-  color: var(--neon);
-}
-
-details.panel-details[open] > :not(summary) {
-  animation: details-reveal 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  transform-origin: top;
-}
-
-@keyframes details-reveal {
-  from {
-    opacity: 0;
-    transform: translateY(-6px) scaleY(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scaleY(1);
-  }
-}
-
 .data-table-wrap {
-  max-height: 320px;
-  overflow-y: auto;
+  max-height: 360px;
+  overflow: auto;
   margin-top: 12px;
   border: 1px solid var(--gridline);
+  background: color-mix(in srgb, var(--surface-1) 55%, transparent);
+}
+
+.data-table-wrap:focus-visible {
+  outline: 1px solid var(--neon);
+  outline-offset: 2px;
 }
 
 table.data-table {
@@ -606,7 +601,10 @@ table.data-table {
 .data-table th {
   position: sticky;
   top: 0;
-  background: var(--surface-2);
+  z-index: 1;
+  background: var(--surface-1);
+  /* A collapsed bottom border scrolls away with the body; an inset shadow stays put. */
+  box-shadow: inset 0 -1px 0 var(--neon-dim);
   color: var(--text-muted);
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -644,9 +642,10 @@ table.data-table {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 22px 20px;
-  background: linear-gradient(160deg, var(--surface-2), var(--surface-1));
+  background: var(--surface-1);
   box-shadow: 0 0 54px var(--neon-faint);
-  animation: drawer-in calc(340ms * var(--motion-scale, 1)) cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: drawer-in calc(340ms * var(--motion-scale, 1)) cubic-bezier(0.22, 1, 0.36, 1)
+    backwards;
 }
 
 .settings-header,
@@ -736,20 +735,6 @@ table.data-table {
   font-size: 10px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-}
-
-.settings-grid select {
-  min-height: 36px;
-  color: var(--text-primary);
-  background: var(--surface-2);
-  border: 1px solid var(--neon-dim);
-  font: inherit;
-  font-size: 12px;
-}
-
-.settings-grid select:focus-visible {
-  border-color: var(--neon);
-  outline: none;
 }
 
 .select-label {
@@ -853,34 +838,6 @@ table.data-table {
 
 .sound-map > .settings-note {
   margin: 0 0 10px;
-}
-
-.sound-row {
-  display: grid;
-  grid-template-columns: 96px minmax(0, 1fr);
-  gap: 4px 10px;
-  padding: 8px 0;
-  border-top: 1px solid var(--gridline);
-  font-size: 12px;
-}
-
-.sound-row a,
-.sound-row .source-placeholder {
-  grid-column: 2;
-}
-
-.sound-row select {
-  padding: 5px 8px;
-}
-
-.sound-row a,
-.source-placeholder {
-  align-self: center;
-  font-size: 10px;
-}
-
-.source-placeholder {
-  color: var(--text-muted);
 }
 
 .settings-actions {
@@ -1285,6 +1242,11 @@ table.data-table {
     0 0 18px var(--neon-dim);
 }
 
+/* Light (the original look): faint edges with a hint of bloom on the SVG outlines. */
+.app-shell[data-glow='light'] .frame-shape svg {
+  filter: drop-shadow(0 0 3px var(--neon-faint));
+}
+
 /* SVG frames and the settings drawer already define their own edge. */
 .app-shell[data-glow='medium'] .frame:has(> .frame-shape),
 .app-shell[data-glow='heavy'] .frame:has(> .frame-shape) {
@@ -1297,38 +1259,6 @@ table.data-table {
 
 .app-shell[data-glow='heavy'] .frame-shape svg {
   filter: drop-shadow(0 0 8px var(--neon-dim));
-}
-
-/* ---------- Panel surfaces ---------- */
-
-.app-shell {
-  --frame-fill: var(--surface-2);
-}
-
-.app-shell[data-surface='glass'] {
-  --frame-fill: color-mix(in srgb, var(--surface-2) 52%, transparent);
-}
-
-.app-shell[data-surface='glass'] .frame {
-  background: color-mix(in srgb, var(--surface-2) 52%, transparent);
-  -webkit-backdrop-filter: blur(10px) saturate(1.3);
-  backdrop-filter: blur(10px) saturate(1.3);
-}
-
-.app-shell[data-surface='solid'] {
-  --frame-fill: var(--surface-1);
-}
-
-.app-shell[data-surface='solid'] .frame {
-  background: var(--surface-1);
-}
-
-.app-shell[data-surface='transparent'] {
-  --frame-fill: transparent;
-}
-
-.app-shell[data-surface='transparent'] .frame:not(.settings-panel) {
-  background: transparent;
 }
 
 /* ---------- Frame shapes ---------- */
@@ -1420,7 +1350,102 @@ table.data-table {
   box-shadow: 0 0 6px var(--neon-dim);
 }
 
-/* Chamfered SVG frames (octagon, kranox, nefrex): the measured outline is the panel. */
+/* ---------- Title decoration ---------- */
+
+/* Rule: a hairline that runs out from the title and ends in a small block (Arwes frame lines). */
+.app-shell[data-title='rule'] .frame-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-shell[data-title='rule'] .frame-title::after {
+  content: '';
+  flex: 1 1 auto;
+  min-width: 24px;
+  height: 5px;
+  background:
+    linear-gradient(var(--neon), var(--neon)) right center / 12px 5px no-repeat,
+    linear-gradient(90deg, var(--neon-dim), transparent) left center / calc(100% - 18px) 1px
+      no-repeat;
+}
+
+/* Bar: zknet-style tinted header strip with a solid leading bar. */
+.app-shell[data-title='bar'] .frame-title {
+  padding: 3px 8px 3px 10px;
+  border-left: 3px solid var(--neon);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--neon) 16%, transparent),
+    transparent 75%
+  );
+}
+
+/* Slash: Soul Extract-style "//" prefix; also replaces the HUD frame's square marker. */
+.app-shell[data-title='slash'] .frame-title::before {
+  content: '//';
+  width: auto;
+  height: auto;
+  margin-right: 0.5em;
+  background: none;
+  box-shadow: none;
+  color: var(--neon-dim);
+  letter-spacing: 0;
+}
+
+/* ---------- Section dividers ---------- */
+
+/* Arwes styleSeparator / styleSteps / styleStrip gradients between verdict paragraphs,
+   methodology items and above the footer. */
+.app-shell[data-divider='line'] {
+  --divider: linear-gradient(90deg, var(--neon-dim), transparent);
+  --divider-size: 100% 1px;
+}
+
+.app-shell[data-divider='separator'] {
+  --divider: linear-gradient(
+    90deg,
+    var(--neon) 0 8px,
+    transparent 8px 12px,
+    var(--neon) 12px 20px,
+    transparent 20px 24px,
+    color-mix(in srgb, var(--neon) 28%, transparent) 24px calc(100% - 24px),
+    transparent calc(100% - 24px) calc(100% - 20px),
+    var(--neon) calc(100% - 20px) calc(100% - 12px),
+    transparent calc(100% - 12px) calc(100% - 8px),
+    var(--neon) calc(100% - 8px)
+  );
+  --divider-size: 100% 2px;
+}
+
+.app-shell[data-divider='steps'] {
+  --divider: repeating-linear-gradient(90deg, var(--neon) 0 6px, transparent 6px 10px);
+  --divider-size: 66px 4px;
+}
+
+.app-shell[data-divider='strip'] {
+  --divider: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--neon) 60%, transparent) 0 4px,
+    transparent 4px 8px
+  );
+  --divider-size: 160px 6px;
+}
+
+.app-shell:not([data-divider='none']) :is(.verdict p + p, .methodology li + li, .site-footer) {
+  padding-top: 12px;
+  background: var(--divider) left top / var(--divider-size) no-repeat;
+}
+
+.app-shell:not([data-divider='none']) .methodology li + li {
+  margin-top: 8px;
+}
+
+.app-shell:not([data-divider='none']) .site-footer {
+  background-position: center top;
+}
+
+/* Chamfered SVG frames (octagon, kranox, nefrex, nero): the measured outline is the panel. */
 .frame:has(> .frame-shape) {
   background: transparent;
   border-color: transparent;
@@ -1443,26 +1468,25 @@ table.data-table {
 }
 
 .frame-shape svg {
+  position: relative;
   display: block;
   overflow: visible;
 }
 
+/* The material is a clipped `.frame-material` under the outline, so the path draws no fill. */
 .frame-shape-fill {
-  fill: var(--frame-fill);
+  fill: none;
   stroke: none;
-}
-
-.app-shell[data-surface='glass'] .frame-shape-fill {
-  -webkit-backdrop-filter: blur(10px);
 }
 
 .frame-shape-line {
   fill: none;
   stroke: var(--neon-dim);
-  stroke-width: 1;
+  stroke-width: var(--border-width, 1px);
   stroke-dasharray: 1;
   stroke-dashoffset: 0;
-  animation: frame-line-draw calc(900ms * var(--motion-scale, 1)) cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: frame-line-draw calc(900ms * var(--motion-scale, 1)) cubic-bezier(0.22, 1, 0.36, 1)
+    backwards;
 }
 
 .frame-shape-accent {
@@ -1470,7 +1494,7 @@ table.data-table {
   stroke: var(--neon);
   stroke-width: 3;
   stroke-linecap: square;
-  animation: corner-fade calc(900ms * var(--motion-scale, 1)) ease-out both;
+  animation: corner-fade calc(900ms * var(--motion-scale, 1)) ease-out backwards;
 }
 
 @keyframes frame-line-draw {
@@ -1488,7 +1512,41 @@ table.data-table {
   }
 }
 
+/* Nero: a faint box whose solid corner brackets flicker on like Arwes FrameNero. */
+.app-shell[data-frame='nero'] .frame-shape-line {
+  opacity: 0.4;
+}
+
+.app-shell[data-frame='nero'] .frame-shape-accent {
+  stroke-width: 2.5;
+  animation: nero-flicker calc(700ms * var(--motion-scale, 1)) steps(1, end) backwards;
+}
+
+@keyframes nero-flicker {
+  0% {
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+  75%,
+  100% {
+    opacity: 1;
+  }
+}
+
 /* ---------- Density ---------- */
+
+.app-shell[data-density='comfortable'] .layout {
+  gap: 20px;
+}
+
+.app-shell[data-density='comfortable'] .frame:not(.settings-panel) {
+  padding: 18px 20px;
+}
 
 .app-shell[data-density='compact'] .layout {
   gap: 12px;
@@ -1658,6 +1716,24 @@ table.data-table {
 
 .fx-text {
   white-space: pre-wrap;
+}
+
+/* Typewriter caret, shown only while the sequence effect is still typing. */
+.text-caret {
+  display: inline-block;
+  width: 0.55em;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.12em;
+  background: currentColor;
+  box-shadow: 0 0 6px var(--neon-dim);
+  animation: caret-blink 0.9s steps(2, jump-none) infinite;
+}
+
+@keyframes caret-blink {
+  to {
+    opacity: 0.15;
+  }
 }
 
 /* Keep units together so wide typefaces wrap the whole unit, not "yr /" + "yr²";
@@ -2000,8 +2076,11 @@ table.data-table {
 }
 
 .fx-flicker {
-  background: rgba(255, 255, 255, 0.025);
-  animation: fx-flicker calc(5s * var(--motion-scale, 1)) steps(1) infinite;
+  /* A faint, smooth brightness breathing; the old hard stepped white flashes read as fog. */
+  background: radial-gradient(130% 100% at 50% 40%, var(--neon-faint), transparent 70%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  animation: fx-flicker calc(7s * var(--motion-scale, 1)) ease-in-out infinite;
 }
 
 @keyframes fx-flicker {
@@ -2009,23 +2088,8 @@ table.data-table {
   100% {
     opacity: 0;
   }
-  41% {
-    opacity: 1;
-  }
-  42% {
-    opacity: 0;
-  }
-  43% {
-    opacity: 0.8;
-  }
-  45% {
-    opacity: 0;
-  }
-  78% {
-    opacity: 0.6;
-  }
-  79% {
-    opacity: 0;
+  50% {
+    opacity: 0.35;
   }
 }
 
@@ -2234,11 +2298,6 @@ table.data-table {
   min-width: 0;
 }
 
-.axis select {
-  width: 100%;
-  padding: 7px 10px;
-}
-
 .axis--toggle .switch-row {
   margin-bottom: 0;
   text-align: left;
@@ -2319,9 +2378,963 @@ table.data-table {
   }
 }
 
+/* ---------- Panel materials ---------- */
+/* Every surface defines --material (a list of background *image* layers, so popups can add a
+   solid colour underneath). `.frame-material` paints it with --surface-opacity and, for the
+   translucent materials, a configurable backdrop blur. Settings swatches reuse the same
+   variables through `.material-swatch[data-material]`. */
+
+.app-shell,
+.material-swatch {
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0.9 0 0 0 -0.32'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --grain-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.06' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.4 0 0 0 0.62'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --brushed: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.002 0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0.32 0 0 0 -0.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --woodgrain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.004 0.06' numOctaves='4' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.12 0 0 0 0 0.06 0 0 0 0 0.02 1.6 0 0 0 -0.62'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --veins: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='320'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='turbulence' baseFrequency='0.008 0.014' numOctaves='5' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.86 0 0 0 0 0.88 0 0 0 0 0.9 -5 0 0 0 0.62'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --tint: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--neon) 8%, transparent),
+    transparent 55%,
+    color-mix(in srgb, var(--neon) 4%, transparent)
+  );
+  --material: none;
+}
+
+.app-shell[data-surface='transparent'],
+.material-swatch[data-material='transparent'] {
+  --material: none;
+}
+
+.app-shell[data-surface='gradient'],
+.material-swatch[data-material='gradient'] {
+  --material: linear-gradient(160deg, var(--surface-2), var(--surface-1));
+}
+
+.app-shell[data-surface='glass'],
+.material-swatch[data-material='glass'] {
+  --material:
+    linear-gradient(
+      125deg,
+      rgba(255, 255, 255, 0.1),
+      rgba(255, 255, 255, 0.02) 38%,
+      rgba(255, 255, 255, 0) 62%,
+      rgba(255, 255, 255, 0.05)
+    ),
+    linear-gradient(
+      color-mix(in srgb, var(--surface-2) 45%, transparent),
+      color-mix(in srgb, var(--surface-1) 45%, transparent)
+    );
+}
+
+.app-shell[data-surface='frosted'],
+.material-swatch[data-material='frosted'] {
+  --material:
+    var(--grain),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.05)),
+    linear-gradient(
+      color-mix(in srgb, var(--surface-2) 62%, transparent),
+      color-mix(in srgb, var(--surface-1) 62%, transparent)
+    );
+}
+
+.app-shell[data-surface='solid'],
+.material-swatch[data-material='solid'] {
+  --material: linear-gradient(var(--surface-1), var(--surface-1));
+}
+
+.app-shell[data-surface='steel'],
+.material-swatch[data-material='steel'] {
+  --material:
+    var(--tint),
+    var(--brushed),
+    linear-gradient(
+      180deg,
+      #30353b 0%,
+      #1f2328 38%,
+      #282d33 52%,
+      #191c20 74%,
+      #22262b 100%
+    );
+}
+
+.app-shell[data-surface='brass'],
+.material-swatch[data-material='brass'] {
+  --material:
+    var(--brushed),
+    radial-gradient(120% 70% at 18% 0%, rgba(255, 226, 150, 0.2), transparent 60%),
+    linear-gradient(165deg, #4a3a1a 0%, #30250f 46%, #3b2e13 70%, #231a0a 100%);
+}
+
+.app-shell[data-surface='copper'],
+.material-swatch[data-material='copper'] {
+  --material:
+    var(--grain),
+    radial-gradient(110% 80% at 85% 0%, rgba(255, 160, 140, 0.18), transparent 58%),
+    radial-gradient(90% 60% at 0% 100%, rgba(70, 150, 130, 0.16), transparent 70%),
+    linear-gradient(160deg, #5a2e22 0%, #3c1d16 52%, #2d1813 100%);
+}
+
+.app-shell[data-surface='wood'],
+.material-swatch[data-material='wood'] {
+  --material:
+    var(--woodgrain),
+    repeating-linear-gradient(
+      91deg,
+      rgba(0, 0, 0, 0) 0 22px,
+      rgba(0, 0, 0, 0.14) 22px 24px,
+      rgba(0, 0, 0, 0) 24px 61px,
+      rgba(255, 200, 150, 0.04) 61px 63px
+    ),
+    linear-gradient(172deg, #3d2818 0%, #2b1b10 55%, #34210f 100%);
+}
+
+.app-shell[data-surface='carbon'],
+.material-swatch[data-material='carbon'] {
+  --material:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.07), transparent 42%, rgba(255, 255, 255, 0.03)),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0 3px, transparent 3px 6px),
+    repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.45) 0 3px, transparent 3px 6px),
+    linear-gradient(#17191d, #0d0f12);
+}
+
+.app-shell[data-surface='holographic'],
+.material-swatch[data-material='holographic'] {
+  --material:
+    linear-gradient(
+      115deg,
+      color-mix(in srgb, var(--neon) 18%, transparent) 0%,
+      color-mix(in srgb, var(--series-1) 10%, transparent) 26%,
+      rgba(255, 90, 210, 0.12) 50%,
+      color-mix(in srgb, var(--threshold) 14%, transparent) 74%,
+      color-mix(in srgb, var(--neon) 18%, transparent) 100%
+    )
+      0 0 / 220% 220%,
+    linear-gradient(
+      color-mix(in srgb, var(--surface-2) 58%, transparent),
+      color-mix(in srgb, var(--surface-1) 58%, transparent)
+    );
+}
+
+.app-shell[data-surface='marble'],
+.material-swatch[data-material='marble'] {
+  --material:
+    var(--veins),
+    radial-gradient(90% 70% at 22% 0%, rgba(255, 255, 255, 0.08), transparent 62%),
+    linear-gradient(160deg, #1d1f22, #0f1012);
+}
+
+.app-shell[data-surface='concrete'],
+.material-swatch[data-material='concrete'] {
+  --material:
+    var(--grain-dark),
+    linear-gradient(170deg, rgba(255, 255, 255, 0.05), transparent 60%),
+    linear-gradient(170deg, #2a2c30, #1d1f22);
+}
+
+/* Textured opaque materials: lift small text off the pattern so it stays readable. */
+.app-shell:is(
+    [data-surface='steel'],
+    [data-surface='brass'],
+    [data-surface='copper'],
+    [data-surface='wood'],
+    [data-surface='marble'],
+    [data-surface='concrete'],
+    [data-surface='carbon']
+  )
+  .frame {
+  --text-muted: var(--text-secondary);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+}
+
+.frame-material {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  transition:
+    box-shadow 220ms ease-out,
+    -webkit-backdrop-filter 220ms,
+    backdrop-filter 220ms;
+}
+
+.frame-material::before,
+.frame-material::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.frame-material::before {
+  background: var(--material);
+  opacity: var(--surface-opacity, 1);
+}
+
+/* Specular top edge on glassy materials. */
+.app-shell:is([data-surface='glass'], [data-surface='frosted'], [data-surface='holographic'])
+  .frame-material::before {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.app-shell[data-surface='steel'] .frame-material::before,
+.app-shell[data-surface='brass'] .frame-material::before,
+.app-shell[data-surface='copper'] .frame-material::before {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+}
+
+.app-shell[data-surface='holographic'] .frame-material::before {
+  animation: holo-shift calc(14s * var(--motion-scale, 1)) ease-in-out infinite alternate;
+}
+
+@keyframes holo-shift {
+  to {
+    background-position:
+      100% 100%,
+      0 0;
+  }
+}
+
+.app-shell[data-translucent='on'] .frame-material {
+  -webkit-backdrop-filter: blur(var(--surface-blur, 12px)) saturate(1.25);
+  backdrop-filter: blur(var(--surface-blur, 12px)) saturate(1.25);
+}
+
+.app-shell[data-translucent='on'][data-surface='frosted'] .frame-material {
+  -webkit-backdrop-filter: blur(calc(var(--surface-blur, 12px) * 1.8)) saturate(1.1);
+  backdrop-filter: blur(calc(var(--surface-blur, 12px) * 1.8)) saturate(1.1);
+}
+
+/* The drawer scrolls, so its material is pinned to the viewport instead of the scroll box. */
+.settings-panel > .frame-material {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: auto;
+  width: min(420px, 100vw);
+}
+
+/* Same for the bottom corner brackets, which would otherwise scroll into the middle of it. */
+.settings-panel > .corner {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(420px, 100vw);
+  pointer-events: none;
+}
+
+.material-swatch {
+  width: 22px;
+  height: 18px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: var(--material), var(--surface-1);
+  background-size: auto;
+}
+
+.material-swatch[data-material='transparent'] {
+  background: repeating-conic-gradient(#2a3440 0 25%, transparent 0 50%) 0 0 / 8px 8px;
+}
+
+/* ---------- Panel shadow ---------- */
+
+.app-shell[data-panel-shadow='soft'] .frame:not(.settings-panel) > .frame-material {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.app-shell[data-panel-shadow='deep'] .frame:not(.settings-panel) > .frame-material {
+  box-shadow:
+    0 26px 48px -10px rgba(0, 0, 0, 0.75),
+    0 8px 18px rgba(0, 0, 0, 0.45);
+}
+
+.app-shell[data-panel-shadow='neon'] .frame:not(.settings-panel) > .frame-material {
+  box-shadow:
+    0 0 26px var(--neon-faint),
+    0 0 2px var(--neon-dim);
+}
+
+/* Chamfered frames clip their material, so the shadow follows the outline as a drop-shadow.
+   A filtered ancestor would cut a backdrop blur off from the scene, so translucent
+   materials cast it from the outline only. */
+.app-shell[data-panel-shadow='soft'][data-translucent='off'] .frame-shape {
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5));
+}
+
+.app-shell[data-panel-shadow='deep'][data-translucent='off'] .frame-shape {
+  filter: drop-shadow(0 22px 22px rgba(0, 0, 0, 0.7));
+}
+
+.app-shell[data-panel-shadow='neon'][data-translucent='off'] .frame-shape {
+  filter: drop-shadow(0 0 14px var(--neon-faint));
+}
+
+.app-shell[data-panel-shadow='soft'][data-translucent='on'] .frame-shape svg,
+.app-shell[data-panel-shadow='deep'][data-translucent='on'] .frame-shape svg {
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.6));
+}
+
+.app-shell[data-panel-shadow='neon'][data-translucent='on'] .frame-shape svg {
+  filter: drop-shadow(0 0 10px var(--neon-dim));
+}
+
+/* ---------- Hover effects ---------- */
+
+.frame-material::after {
+  opacity: 0;
+  transition:
+    opacity 260ms ease-out,
+    background-position 0s;
+}
+
+.app-shell[data-hover='none'] .frame-material::after {
+  display: none;
+}
+
+.app-shell[data-hover='glow'] .frame:not(.settings-panel) {
+  transition: border-color 200ms ease-out;
+}
+
+.app-shell[data-hover='glow'] .frame:not(.settings-panel):hover {
+  border-color: var(--neon-dim);
+}
+
+.app-shell[data-hover='glow'] .frame:not(.settings-panel) > .frame-material::after,
+.app-shell[data-hover='glow'] .frame-shape .frame-material::after {
+  background: radial-gradient(
+    circle 260px at var(--mx, 50%) var(--my, 0%),
+    color-mix(in srgb, var(--neon) 11%, transparent),
+    transparent 70%
+  );
+  box-shadow: inset 0 0 28px var(--neon-faint);
+}
+
+.app-shell[data-hover='glow'] .frame:not(.settings-panel):hover .frame-material::after {
+  opacity: 1;
+}
+
+.app-shell[data-hover='lift'] .frame:not(.settings-panel) {
+  transition:
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 220ms;
+}
+
+.app-shell[data-hover='lift'] .frame:not(.settings-panel):hover {
+  transform: translateY(-3px);
+  border-color: var(--neon-dim);
+}
+
+.app-shell[data-hover='sweep'] .frame:not(.settings-panel) .frame-material::after {
+  opacity: 1;
+  background: linear-gradient(
+      105deg,
+      transparent 40%,
+      color-mix(in srgb, var(--neon) 16%, transparent) 50%,
+      transparent 60%
+    )
+    no-repeat;
+  background-size: 260% 100%;
+  background-position: 100% 0;
+}
+
+.app-shell[data-hover='sweep'] .frame:not(.settings-panel):hover .frame-material::after {
+  background-position: 0 0;
+  transition: background-position calc(900ms * var(--motion-scale, 1)) ease-out;
+}
+
+/* ---------- Pointer ---------- */
+
+.app-shell[data-cursor='crosshair'] {
+  cursor: crosshair;
+}
+
+.app-shell[data-cursor='reticle'] {
+  cursor: var(--cursor-reticle, crosshair);
+}
+
+.app-shell:not([data-cursor='system'])
+  :is(button, a, label[for], [role='option'], [role='tab'], input[type='range']) {
+  cursor: pointer;
+}
+
+.app-shell:not([data-cursor='system']) :is(button:disabled, [aria-disabled='true']) {
+  cursor: not-allowed;
+}
+
+/* ---------- Custom select (WAI-ARIA select-only combobox) ---------- */
+
+.select {
+  position: relative;
+  min-width: 0;
+}
+
+.select-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 12px;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-align: left;
+  color: var(--text-primary);
+  background:
+    linear-gradient(225deg, var(--neon) 0 5px, transparent 5px),
+    linear-gradient(90deg, var(--neon-faint), transparent 72%),
+    color-mix(in srgb, var(--surface-2) 82%, transparent);
+  border: 1px solid var(--neon-dim);
+  border-radius: 0;
+  cursor: pointer;
+  transition:
+    border-color 120ms,
+    box-shadow 120ms,
+    color 120ms;
+}
+
+.select-button:hover,
+.select-button:focus-visible,
+.select[data-open='true'] .select-button {
+  border-color: var(--neon);
+  box-shadow:
+    0 0 12px var(--neon-faint),
+    inset 0 0 10px var(--neon-faint);
+  outline: none;
+}
+
+.select-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.select-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-chevron {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--neon);
+  border-bottom: 1.5px solid var(--neon);
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.select[data-open='true'] .select-chevron {
+  transform: translateY(2px) rotate(225deg);
+}
+
+.select-list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 40;
+  max-height: 264px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px),
+    var(--material),
+    var(--surface-2);
+  border: 1px solid var(--neon-dim);
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.6),
+    0 0 18px var(--neon-faint);
+  transform-origin: top;
+  animation: select-open calc(170ms * var(--motion-scale, 1)) cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.select-list[hidden] {
+  display: none;
+}
+
+.select[data-placement='above'] .select-list {
+  top: auto;
+  bottom: calc(100% + 4px);
+  transform-origin: bottom;
+}
+
+.select-option {
+  display: grid;
+  gap: 2px;
+  padding: 7px 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-left: 2px solid transparent;
+  cursor: pointer;
+}
+
+.select-option small {
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.select-option[aria-selected='true'] {
+  color: var(--neon);
+}
+
+.select-option[aria-selected='true'] > span::after {
+  content: ' ◂';
+}
+
+.select-option[data-active='true'] {
+  color: var(--text-primary);
+  background: linear-gradient(90deg, var(--neon-faint), transparent);
+  border-left-color: var(--neon);
+  box-shadow: inset 0 0 12px var(--neon-faint);
+}
+
+.select-option[data-active='true'] small {
+  color: var(--text-secondary);
+}
+
+@keyframes select-open {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scaleY(0.9);
+  }
+}
+
+/* Open popups must float over the following panels (each panel is its own stacking context). */
+.frame:has(.select[data-open='true']) {
+  z-index: 30;
+}
+
+.entity-select {
+  min-width: 220px;
+}
+
+.sound-add .select-button {
+  min-height: 28px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-style: dashed;
+  background: transparent;
+}
+
+.sound-add .select-button:hover,
+.sound-add .select-button:focus-visible {
+  color: var(--neon);
+}
+
+/* ---------- Sound map & library ---------- */
+
+.sound-row {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 6px 10px;
+  align-items: start;
+  padding: 10px 0;
+  border-top: 1px solid var(--gridline);
+  font-size: 12px;
+}
+
+.sound-row-label {
+  padding-top: 6px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.sound-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sound-add {
+  grid-column: 2;
+}
+
+.sound-chip {
+  display: inline-flex;
+  align-items: stretch;
+  font-size: 11px;
+  background: var(--neon-faint);
+  border: 1px solid var(--neon-dim);
+}
+
+.sound-chip--empty {
+  padding: 4px 9px;
+  color: var(--text-muted);
+  background: transparent;
+  border-style: dashed;
+}
+
+.sound-chip-play,
+.sound-chip-remove {
+  font: inherit;
+  color: var(--text-primary);
+  background: transparent;
+  border: 0;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition:
+    color 120ms,
+    background 120ms;
+}
+
+.sound-chip-remove {
+  padding: 4px 7px;
+  color: var(--text-muted);
+  border-left: 1px solid var(--neon-dim);
+}
+
+.sound-chip-play:hover:not(:disabled),
+.sound-chip-play:focus-visible {
+  color: var(--neon);
+  background: var(--neon-faint);
+  outline: none;
+}
+
+.sound-chip-remove:hover,
+.sound-chip-remove:focus-visible {
+  color: var(--danger);
+  outline: none;
+}
+
+.sound-chip-play:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sound-library {
+  grid-column: 1 / -1;
+}
+
+.sound-library ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sound-library li {
+  display: grid;
+  grid-template-columns: 28px 70px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0;
+  border-top: 1px solid var(--gridline);
+  font-size: 11px;
+}
+
+.sound-library .sound-chip-play {
+  width: 26px;
+  height: 24px;
+  padding: 0;
+  color: var(--neon);
+  border: 1px solid var(--neon-dim);
+}
+
+.sound-library-name {
+  color: var(--text-primary);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+}
+
+.sound-library-character {
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.sound-library a {
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+/* ---------- Range sliders ---------- */
+
+.axis input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 18px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.axis input[type='range']::-webkit-slider-runnable-track {
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--neon) 0 var(--fill, 50%),
+    var(--neon-faint) var(--fill, 50%) 100%
+  );
+  box-shadow: 0 0 6px var(--neon-faint);
+}
+
+.axis input[type='range']::-moz-range-track {
+  height: 4px;
+  background: var(--neon-faint);
+}
+
+.axis input[type='range']::-moz-range-progress {
+  height: 4px;
+  background: var(--neon);
+}
+
+.axis input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 16px;
+  margin-top: -6px;
+  background: var(--neon);
+  border: 1px solid var(--page);
+  box-shadow: 0 0 8px var(--neon-dim);
+}
+
+.axis input[type='range']::-moz-range-thumb {
+  width: 10px;
+  height: 16px;
+  border-radius: 0;
+  background: var(--neon);
+  border: 1px solid var(--page);
+  box-shadow: 0 0 8px var(--neon-dim);
+}
+
+.axis input[type='range']:focus-visible {
+  outline: 1px solid var(--neon);
+  outline-offset: 4px;
+}
+
+/* ---------- Data table styles ---------- */
+
+.data-table tbody tr td {
+  transition:
+    background 120ms,
+    color 120ms;
+}
+
+.data-table tbody tr:hover td {
+  color: var(--text-primary);
+  background: var(--neon-faint);
+}
+
+.app-shell[data-table='zebra'] .data-table tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--neon) 5%, transparent);
+}
+
+.app-shell[data-table='zebra'] .data-table tbody tr:hover td {
+  background: var(--neon-faint);
+}
+
+.app-shell[data-table='grid'] .data-table :is(th, td) {
+  border: 1px solid var(--gridline);
+}
+
+.app-shell[data-table='terminal'] .data-table {
+  font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+
+.app-shell[data-table='terminal'] .data-table td {
+  color: var(--neon);
+  text-shadow: 0 0 6px var(--neon-faint);
+  border-bottom-style: dashed;
+}
+
+.app-shell[data-table='terminal'] .data-table td:first-child::before {
+  content: '> ';
+  color: var(--text-muted);
+}
+
+.app-shell[data-table='terminal'] .data-table tbody tr:hover td {
+  color: var(--page);
+  background: var(--neon);
+  text-shadow: none;
+}
+
+/* ---------- Scrollbars ---------- */
+/* The root scrollbar lives on <html>, outside the shell, so the shell copies its palette
+   variables and `data-scrollbar` onto the document element (see App.tsx). */
+
+html,
+.app-shell {
+  --sb-size: 8px;
+  --sb-track: transparent;
+  --sb-thumb: var(--neon-dim);
+  --sb-thumb-hover: var(--neon);
+}
+
+html[data-scrollbar='rail'],
+.app-shell[data-scrollbar='rail'] {
+  --sb-size: 12px;
+  --sb-track: color-mix(in srgb, var(--neon) 6%, var(--page));
+}
+
+html[data-scrollbar='block'],
+.app-shell[data-scrollbar='block'] {
+  --sb-size: 14px;
+  --sb-track: color-mix(in srgb, var(--neon) 4%, var(--page));
+}
+
+html::-webkit-scrollbar,
+.app-shell ::-webkit-scrollbar {
+  width: var(--sb-size);
+  height: var(--sb-size);
+}
+
+html::-webkit-scrollbar-track,
+.app-shell ::-webkit-scrollbar-track {
+  background: var(--sb-track);
+}
+
+html::-webkit-scrollbar-thumb,
+.app-shell ::-webkit-scrollbar-thumb {
+  background: var(--sb-thumb);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+.app-shell ::-webkit-scrollbar-thumb:hover {
+  background-color: var(--sb-thumb-hover);
+}
+
+html::-webkit-scrollbar-corner,
+.app-shell ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+html[data-scrollbar='rail']::-webkit-scrollbar-track,
+.app-shell[data-scrollbar='rail'] ::-webkit-scrollbar-track {
+  border-left: 1px solid var(--neon-faint);
+  box-shadow: inset 1px 0 0 var(--neon-faint);
+}
+
+html[data-scrollbar='rail']::-webkit-scrollbar-thumb,
+.app-shell[data-scrollbar='rail'] ::-webkit-scrollbar-thumb {
+  border-width: 3px;
+  background-color: var(--neon);
+  box-shadow: inset 0 0 6px var(--neon-dim);
+}
+
+html[data-scrollbar='block']::-webkit-scrollbar-thumb,
+.app-shell[data-scrollbar='block'] ::-webkit-scrollbar-thumb {
+  border-width: 2px;
+  background: repeating-linear-gradient(0deg, var(--sb-thumb) 0 6px, transparent 6px 8px)
+    padding-box;
+}
+
+html[data-scrollbar='block']::-webkit-scrollbar-thumb:hover,
+.app-shell[data-scrollbar='block'] ::-webkit-scrollbar-thumb:hover {
+  background: repeating-linear-gradient(0deg, var(--neon) 0 6px, transparent 6px 8px) padding-box;
+}
+
+/* Chromium 121+ ignores the ::-webkit-scrollbar rules above once these standard properties
+   are set, so they are only for engines without the pseudo-elements (Firefox). */
+@supports not selector(::-webkit-scrollbar) {
+  html,
+  .app-shell * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--sb-thumb) var(--sb-track);
+  }
+
+  html[data-scrollbar='rail'],
+  html[data-scrollbar='block'],
+  .app-shell[data-scrollbar='rail'] *,
+  .app-shell[data-scrollbar='block'] * {
+    scrollbar-width: auto;
+  }
+}
+
+/* ---------- Backdrop gradients ---------- */
+
+.backdrop-gradient {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--page);
+  transition: background 400ms;
+}
+
+.space-backdrop {
+  background: transparent;
+}
+
+.app-shell[data-backdrop='horizon'] .backdrop-gradient {
+  background:
+    radial-gradient(120% 55% at 50% 100%, color-mix(in srgb, var(--neon) 22%, transparent), transparent 62%),
+    linear-gradient(180deg, var(--page) 0%, color-mix(in srgb, var(--neon) 5%, var(--page)) 58%, color-mix(in srgb, var(--neon) 12%, var(--page)) 100%);
+}
+
+.app-shell[data-backdrop='deep-space'] .backdrop-gradient {
+  background:
+    radial-gradient(80% 70% at 50% 40%, color-mix(in srgb, var(--surface-2) 90%, var(--neon) 10%), transparent 72%),
+    radial-gradient(140% 120% at 50% 50%, transparent 40%, rgba(0, 0, 0, 0.75) 100%),
+    var(--page);
+}
+
+.app-shell[data-backdrop='aurora'] .backdrop-gradient {
+  background:
+    radial-gradient(60% 22% at 30% 14%, rgba(60, 255, 170, 0.2), transparent 70%),
+    radial-gradient(50% 18% at 68% 22%, rgba(150, 90, 255, 0.18), transparent 72%),
+    radial-gradient(70% 30% at 85% 8%, color-mix(in srgb, var(--neon) 22%, transparent), transparent 70%),
+    linear-gradient(172deg, transparent 8%, rgba(40, 220, 160, 0.07) 18%, transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, var(--neon) 8%, var(--page)), var(--page) 70%);
+}
+
+.app-shell[data-backdrop='nebula'] .backdrop-gradient {
+  background:
+    radial-gradient(45% 38% at 18% 28%, rgba(190, 60, 220, 0.2), transparent 70%),
+    radial-gradient(40% 36% at 78% 62%, color-mix(in srgb, var(--neon) 18%, transparent), transparent 70%),
+    radial-gradient(50% 40% at 60% 12%, rgba(255, 120, 80, 0.1), transparent 70%),
+    var(--page);
+}
+
+.app-shell[data-backdrop='sunset'] .backdrop-gradient {
+  background:
+    radial-gradient(55% 32% at 50% 100%, rgba(255, 120, 60, 0.32), transparent 70%),
+    linear-gradient(180deg, var(--page) 0%, #1a0b24 55%, #3a0f2e 82%, #4d1a22 100%);
+}
+
+.app-shell[data-backdrop='abyss'] .backdrop-gradient {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--neon) 9%, var(--page)) 0%,
+    var(--page) 45%,
+    #000 100%
+  );
+}
+
+.app-shell[style*='--bg-opacity'] .backdrop-gradient {
+  filter: brightness(var(--bg-brightness, 1)) opacity(var(--bg-opacity, 1));
+}
+
+/* ---------- Text size ---------- */
+
+.app-shell :is(.layout, .hud-bar) {
+  zoom: var(--font-scale, 1);
+}
+
 /* Motion-off / reduced motion: hide continuously animated decoration. */
 .motion-off :is(.fx-sweep, .fx-flicker),
 .motion-off .hud-bar-dot,
+.motion-off .frame-material::before,
+.motion-off .text-caret,
 .motion-off .fx-noise {
   animation: none !important;
 }
