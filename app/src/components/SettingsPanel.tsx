@@ -42,7 +42,7 @@ function SourceLinks({ sources }: { sources?: readonly ReferenceId[] }) {
   if (!sources || sources.length === 0) return null;
   return (
     <span className="axis-sources">
-      {sources.map((id) => (
+      {[...new Set(sources)].map((id) => (
         <a key={id} href={REFERENCES[id].url} target="_blank" rel="noreferrer">
           {REFERENCES[id].label} ↗
         </a>

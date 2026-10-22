@@ -137,9 +137,18 @@ export default function App() {
 
   useEffect(() => {
     // Drop the applied share link so reloads use the (now saved) preference.
-    if (decodeShareHash(window.location.hash)) {
+    const dropShareHash = () =>
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
-    }
+    if (decodeShareHash(window.location.hash)) dropShareHash();
+    // A share link pasted into an already open tab only changes the hash (no reload).
+    const onHashChange = () => {
+      const shared = decodeShareHash(window.location.hash);
+      if (!shared) return;
+      setUiSettings(shared);
+      dropShareHash();
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
   useEffect(() => {

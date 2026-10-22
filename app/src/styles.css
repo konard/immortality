@@ -1571,8 +1571,18 @@ table.data-table {
   stroke-width: 1;
 }
 
+.gauge-ring-row > div {
+  min-width: 0;
+}
+
 .gauge-ring-row .hero-number {
-  font-size: 44px;
+  font-size: 40px;
+}
+
+.gauge-ring-row .hero-number .unit {
+  display: block;
+  margin: 2px 0 0;
+  font-size: 14px;
 }
 
 /* ---------- Typography ---------- */
@@ -1638,7 +1648,13 @@ table.data-table {
 }
 
 .fx-text {
-  white-space: pre;
+  white-space: pre-wrap;
+}
+
+/* Keep units together so wide typefaces wrap the whole unit, not "yr /" + "yr²". */
+.hero-number .unit,
+.stat-tile .value .unit {
+  white-space: nowrap;
 }
 
 /* glitchy.website-style RGB split: two offset copies sliced by animated clip paths. */
@@ -2284,7 +2300,7 @@ table.data-table {
   }
 
   .gauge-ring-row .hero-number {
-    font-size: 36px;
+    font-size: 34px;
   }
 }
 

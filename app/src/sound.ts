@@ -11,6 +11,11 @@ let effects: SoundEffects = { ...DEFAULT_SETTINGS.effects };
 
 function context(): AudioContext | null {
   if (typeof AudioContext === 'undefined') return null;
+  // Cues fired by load-time animations (decipher titles, boot log) before the first
+  // gesture would only trigger autoplay warnings; stay silent until the user interacts.
+  if (!ctx && typeof navigator !== 'undefined' && navigator.userActivation?.hasBeenActive === false) {
+    return null;
+  }
   if (!ctx) ctx = new AudioContext();
   if (ctx.state === 'suspended') {
     void ctx.resume().catch(() => {
