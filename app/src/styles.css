@@ -145,6 +145,11 @@ body {
   animation: horizon-grid-drift calc(2.8s / var(--bg-speed, 1)) linear infinite;
 }
 
+/* Background speed 0% freezes the CSS grids too, like the canvas scenes. */
+.space-backdrop[data-frozen] .backdrop-grid {
+  animation-play-state: paused;
+}
+
 @keyframes square-grid-drift {
   to {
     background-position: 44px 44px;

@@ -865,6 +865,7 @@ export function Starfield({ mode = 'stars', animated = true, palette, speed = 1 
     <div
       className={`space-backdrop space-backdrop--${mode}`}
       style={{ '--bg-speed': Math.max(0.05, speed) } as CSSProperties}
+      data-frozen={speed <= 0 ? 'true' : undefined}
       aria-hidden="true"
     >
       <canvas ref={canvasRef} className="starfield" />

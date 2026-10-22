@@ -21,10 +21,12 @@ const COUNT_MS = 900;
 /** Counts from the previously shown number to `value` with requestAnimationFrame. */
 function useCountUp(value: string, enabled: boolean): string {
   const [shown, setShown] = useState(enabled && isCountable(value) ? countUpText(value, 0) : value);
+  // The number on screen, so an interrupted count resumes from where it visibly is.
   const from = useRef(0);
 
   useEffect(() => {
     if (!enabled || !isCountable(value)) {
+      from.current = isCountable(value) ? Number(value) : 0;
       setShown(value);
       return;
     }
@@ -32,14 +34,12 @@ function useCountUp(value: string, enabled: boolean): string {
     const origin = from.current;
     let frame = requestAnimationFrame(function tick(now) {
       const progress = (now - start) / COUNT_MS;
-      setShown(countUpText(value, progress, origin));
+      const text = countUpText(value, progress, origin);
+      from.current = Number(text);
+      setShown(text);
       if (progress < 1) frame = requestAnimationFrame(tick);
     });
-    return () => {
-      cancelAnimationFrame(frame);
-      // The next change counts on from this target rather than restarting at zero.
-      from.current = Number(value);
-    };
+    return () => cancelAnimationFrame(frame);
   }, [value, enabled]);
 
   return shown;

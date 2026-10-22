@@ -25,9 +25,12 @@ export function Frame({ title, subtitle, className, children }: FrameProps) {
   const trackPointer =
     hoverEffect === 'glow'
       ? (event: PointerEvent<HTMLElement>) => {
-          const rect = event.currentTarget.getBoundingClientRect();
-          event.currentTarget.style.setProperty('--mx', `${event.clientX - rect.left}px`);
-          event.currentTarget.style.setProperty('--my', `${event.clientY - rect.top}px`);
+          const panel = event.currentTarget;
+          const rect = panel.getBoundingClientRect();
+          // The rect is in zoomed viewport pixels, the panel's own lengths are not (text size).
+          const scale = rect.width ? panel.offsetWidth / rect.width : 1;
+          panel.style.setProperty('--mx', `${(event.clientX - rect.left) * scale}px`);
+          panel.style.setProperty('--my', `${(event.clientY - rect.top) * scale}px`);
         }
       : undefined;
   return (
