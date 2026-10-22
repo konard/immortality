@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { BackgroundId, PaletteId } from '../settings';
+import { onSoundCue } from '../sound';
 
 interface StarfieldProps {
   mode?: BackgroundId;
@@ -94,6 +95,10 @@ export function Starfield({ mode = 'stars', animated = true, palette, speed = 1 
     let bokeh: Array<{ x: number; y: number; radius: number; speed: number; phase: number }> = [];
     let nodes: Array<{ x: number; y: number; vx: number; vy: number }> = [];
     let warp: Array<{ angle: number; distance: number; speed: number }> = [];
+    // Sound resonance: rings spawned by interaction cues, plus the sparks they shed.
+    let ripples: Array<{ x: number; born: number; strength: number }> = [];
+    let sparks: Array<{ x: number; y: number; vx: number; vy: number; life: number }> = [];
+    let lastAmbient = 0;
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
@@ -653,6 +658,155 @@ export function Starfield({ mode = 'stars', animated = true, palette, speed = 1 
       }
     };
 
+    // Arwes "GridLines": dashed horizontals over solid verticals, the dashes slowly marching.
+    const drawGridLines = (time: number) => {
+      const distance = 30;
+      context.lineWidth = 1;
+      context.strokeStyle = tint(0.07);
+      context.setLineDash([]);
+      context.beginPath();
+      for (let x = distance / 2; x < width; x += distance) {
+        context.moveTo(x, 0);
+        context.lineTo(x, height);
+      }
+      context.stroke();
+      context.strokeStyle = tint(0.12);
+      context.setLineDash([4, 4]);
+      context.lineDashOffset = shouldAnimate ? -(time / 120) % 8 : 0;
+      context.beginPath();
+      for (let y = distance / 2; y < height; y += distance) {
+        context.moveTo(0, y);
+        context.lineTo(width, y);
+      }
+      context.stroke();
+      context.setLineDash([]);
+      context.lineDashOffset = 0;
+    };
+
+    // Soul Extract-style signal rails: a fine scanline field, dotted column rails, solid row
+    // rails and lights running along them under a soft corner glow.
+    const drawRails = (time: number) => {
+      const glow = context.createRadialGradient(
+        width * 0.25,
+        height * 0.25,
+        0,
+        width * 0.25,
+        height * 0.25,
+        Math.max(width, height) * 0.6,
+      );
+      glow.addColorStop(0, tint(0.09));
+      glow.addColorStop(1, tint(0));
+      context.fillStyle = glow;
+      context.fillRect(0, 0, width, height);
+      context.fillStyle = tint(0.025);
+      for (let y = 0; y < height; y += 10) context.fillRect(0, y, width, 1);
+      context.lineWidth = 1;
+      context.strokeStyle = tint(0.13);
+      context.setLineDash([3, 7]);
+      context.beginPath();
+      for (let x = 100; x < width; x += 100) {
+        context.moveTo(x + 0.5, 0);
+        context.lineTo(x + 0.5, height);
+      }
+      context.stroke();
+      context.setLineDash([]);
+      context.strokeStyle = tint(0.08);
+      context.beginPath();
+      for (let y = 200; y < height; y += 200) {
+        context.moveTo(0, y + 0.5);
+        context.lineTo(width, y + 0.5);
+      }
+      context.stroke();
+      if (!shouldAnimate) return;
+      const random = seededRandom(331);
+      const columns = Math.floor(width / 100);
+      for (let column = 1; column <= columns; column++) {
+        if (random() > 0.45) continue;
+        const period = 3800 + random() * 5200;
+        const y = (((time + random() * period) % period) / period) * (height + 160) - 80;
+        const light = context.createLinearGradient(0, y - 80, 0, y);
+        light.addColorStop(0, tint(0));
+        light.addColorStop(1, tint(0.7));
+        context.fillStyle = light;
+        context.fillRect(column * 100, y - 80, 1.5, 80);
+      }
+      const rows = Math.floor(height / 200);
+      for (let row = 1; row <= rows; row++) {
+        const period = 6000 + random() * 6000;
+        const x = (((time + random() * period) % period) / period) * (width + 240) - 120;
+        const light = context.createLinearGradient(x - 120, 0, x, 0);
+        light.addColorStop(0, tint(0));
+        light.addColorStop(1, tint(0.6));
+        context.fillStyle = light;
+        context.fillRect(x - 120, row * 200, 120, 1.5);
+      }
+    };
+
+    // glitchy.website-style sound resonance: a slowly breathing ring that sends out ripples
+    // and sparks whenever the interface makes a sound (and a quiet ambient pulse otherwise).
+    const drawResonance = (time: number) => {
+      drawStars(time, 0.16);
+      const cy = height * 0.55;
+      const base = Math.min(width, height) * 0.18;
+      context.lineWidth = 1;
+      context.strokeStyle = tint(0.22);
+      context.beginPath();
+      for (let k = 0; k <= 180; k++) {
+        const angle = (k / 180) * Math.PI * 2;
+        const wobble = shouldAnimate
+          ? Math.sin(angle * 6 + time / 700) * 3 + Math.sin(angle * 11 - time / 460) * 1.5
+          : 0;
+        const x = width / 2 + Math.cos(angle) * (base + wobble);
+        const y = cy + Math.sin(angle) * (base + wobble);
+        if (k === 0) context.moveTo(x, y);
+        else context.lineTo(x, y);
+      }
+      context.stroke();
+      if (!shouldAnimate) return;
+      if (time - lastAmbient > 2500) {
+        lastAmbient = time;
+        ripples.push({ x: width / 2, born: time, strength: 0.35 });
+      }
+      const life = 2600;
+      ripples = ripples.filter((ripple) => time - ripple.born < life);
+      for (const ripple of ripples) {
+        const t = (time - ripple.born) / life;
+        const radius = base + t * Math.max(width, height) * 0.55;
+        context.strokeStyle = tint((1 - t) * 0.5 * ripple.strength);
+        context.lineWidth = 1 + (1 - t) * 1.5;
+        context.beginPath();
+        context.arc(ripple.x, cy, radius, 0, Math.PI * 2);
+        context.stroke();
+      }
+      sparks = sparks.filter((spark) => spark.life > 0);
+      for (const spark of sparks) {
+        context.fillStyle = tint(spark.life * 0.8);
+        context.fillRect(spark.x, spark.y, 1.6, 1.6);
+        spark.x += spark.vx * step;
+        spark.y += spark.vy * step;
+        spark.life -= 0.012 * step;
+      }
+    };
+
+    const resonate = (pan: number, strength: number) => {
+      if (!shouldAnimate || ripples.length > 24) return;
+      const x = width / 2 + pan * width * 0.3;
+      ripples.push({ x, born: clock, strength });
+      const base = Math.min(width, height) * 0.18;
+      for (let i = 0; i < 10; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.6 + Math.random() * 1.6;
+        sparks.push({
+          x: x + Math.cos(angle) * base,
+          y: height * 0.55 + Math.sin(angle) * base,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1,
+        });
+      }
+      if (sparks.length > 240) sparks = sparks.slice(-240);
+    };
+
     const draw = (time: number) => {
       const elapsed = lastTime ? Math.min(66, time - lastTime) : 1000 / 60;
       lastTime = time;
@@ -676,6 +830,9 @@ export function Starfield({ mode = 'stars', animated = true, palette, speed = 1 
       else if (mode === 'planet-orbit') drawPlanet(time);
       else if (mode === 'star-orbit') drawSun(time);
       else if (mode === 'asteroids') drawAsteroids(time);
+      else if (mode === 'grid-lines') drawGridLines(time);
+      else if (mode === 'rails') drawRails(time);
+      else if (mode === 'resonance') drawResonance(time);
       else drawStars(time, mode === 'stars' ? 0.35 : 0.18);
       if (shouldAnimate) frame = requestAnimationFrame(draw);
     };
@@ -689,10 +846,18 @@ export function Starfield({ mode = 'stars', animated = true, palette, speed = 1 
     window.addEventListener('resize', onResize);
     if (shouldAnimate) frame = requestAnimationFrame(draw);
     else draw(0);
+    // Hover cues are frequent and soft; clicks, toggles and notifications ring out harder.
+    const unsubscribe =
+      mode === 'resonance'
+        ? onSoundCue(({ event, pan }) =>
+            resonate(pan, event === 'hover' || event === 'type' ? 0.45 : 1),
+          )
+        : undefined;
 
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener('resize', onResize);
+      unsubscribe?.();
     };
   }, [animated, mode, palette, reducedMotion]);
 

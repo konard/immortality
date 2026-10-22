@@ -111,6 +111,9 @@ export const BACKGROUNDS = [
   { id: 'hexagons', label: 'Hex lattice', source: 'gridcn' },
   { id: 'radar', label: 'Radar sweep', source: 'gridcn' },
   { id: 'constellation', label: 'Constellation network', source: 'zknet' },
+  { id: 'grid-lines', label: 'Grid lines', source: 'arwesBgs' },
+  { id: 'rails', label: 'Signal rails', source: 'soulextractSource' },
+  { id: 'resonance', label: 'Sound resonance', source: 'glitchy' },
 ] as const satisfies readonly OptionDef[];
 
 /** Full-screen gradient washes painted behind the background animation. */
@@ -136,6 +139,7 @@ export const FRAME_STYLES = [
   { id: 'octagon', label: 'Octagon', description: 'All corners chamfered.' },
   { id: 'kranox', label: 'Kranox', description: 'Asymmetric chamfer with an accent edge.' },
   { id: 'nefrex', label: 'Nefrex', description: 'Cut corners with offset accent lines.' },
+  { id: 'nero', label: 'Nero', description: 'Faint box with four solid corner squares.' },
   { id: 'lines', label: 'Lines', description: 'Top and bottom rails only.' },
   { id: 'underline', label: 'Underline', description: 'A single glowing base line.' },
   { id: 'hud', label: 'HUD bracket', description: 'thegridcn HUD frame with header rule.' },
@@ -220,6 +224,19 @@ export const FONTS = [
 export const HEADING_CASES = [
   { id: 'upper', label: 'Uppercase' },
   { id: 'normal', label: 'As written' },
+] as const satisfies readonly OptionDef[];
+
+/** Decoration of panel titles. */
+export const TITLE_STYLES = [
+  { id: 'plain', label: 'Plain' },
+  {
+    id: 'rule',
+    label: 'Header rule',
+    description: 'A separator line running out of the title, ending in a deco block.',
+    source: 'arwesFrames',
+  },
+  { id: 'bar', label: 'Accent bar', description: 'A glowing vertical bar before the title.', source: 'zknet' },
+  { id: 'slash', label: 'Slashes', description: 'A // marker before the title.', source: 'soulextractSource' },
 ] as const satisfies readonly OptionDef[];
 
 export const TEXT_EFFECTS = [
@@ -381,6 +398,7 @@ export type DensityId = (typeof DENSITIES)[number]['id'];
 export type MeterStyleId = (typeof METER_STYLES)[number]['id'];
 export type FontId = (typeof FONTS)[number]['id'];
 export type HeadingCaseId = (typeof HEADING_CASES)[number]['id'];
+export type TitleStyleId = (typeof TITLE_STYLES)[number]['id'];
 export type TextEffectId = (typeof TEXT_EFFECTS)[number]['id'];
 export type ScanlineId = (typeof SCANLINE_LEVELS)[number]['id'];
 export type IntroId = (typeof INTROS)[number]['id'];
@@ -419,6 +437,7 @@ export interface UiSettings {
   font: FontId;
   fontScale: number;
   headingCase: HeadingCaseId;
+  titleStyle: TitleStyleId;
   textEffect: TextEffectId;
   // Scene
   background: BackgroundId;
@@ -437,6 +456,8 @@ export interface UiSettings {
   chartStyle: ChartStyleId;
   chartGrid: ChartGridId;
   chartLineWidth: number;
+  sparklines: boolean;
+  countUp: boolean;
   // Controls & data
   hoverEffect: HoverEffectId;
   cursor: CursorId;
@@ -483,6 +504,7 @@ export const DEFAULT_SETTINGS: UiSettings = {
   font: 'orbitron',
   fontScale: 100,
   headingCase: 'upper',
+  titleStyle: 'plain',
   textEffect: 'sequence',
   background: 'perspective-grid',
   backdropGradient: 'none',
@@ -499,6 +521,8 @@ export const DEFAULT_SETTINGS: UiSettings = {
   chartStyle: 'area',
   chartGrid: 'dashed',
   chartLineWidth: 2,
+  sparklines: true,
+  countUp: true,
   hoverEffect: 'glow',
   cursor: 'system',
   tableStyle: 'lined',
@@ -738,6 +762,15 @@ export const AXES: readonly Axis[] = [
     display: 'buttons',
   },
   {
+    key: 'titleStyle',
+    kind: 'choice',
+    label: 'Title decoration',
+    group: 'type',
+    options: TITLE_STYLES,
+    display: 'buttons',
+    sources: ['arwesFrames', 'zknet', 'soulextractSource'],
+  },
+  {
     key: 'textEffect',
     kind: 'choice',
     label: 'Title text effect',
@@ -861,6 +894,22 @@ export const AXES: readonly Axis[] = [
     max: 4,
     step: 0.5,
     unit: 'px',
+  },
+  {
+    key: 'sparklines',
+    kind: 'toggle',
+    label: 'Stat sparklines',
+    group: 'hud',
+    description: 'Small trend lines under the headline numbers.',
+    sources: ['gridcn'],
+  },
+  {
+    key: 'countUp',
+    kind: 'toggle',
+    label: 'Counting numbers',
+    group: 'hud',
+    description: 'Headline numbers count up to their value when they appear.',
+    sources: ['gridcn'],
   },
   {
     key: 'hoverEffect',
@@ -1225,6 +1274,7 @@ export const PRESETS: readonly Preset[] = [
       surface: 'glass',
       surfaceOpacity: 70,
       font: 'electrolize',
+      titleStyle: 'rule',
       textEffect: 'decipher',
       background: 'moving-lines',
       backdropGradient: 'deep-space',
@@ -1239,15 +1289,16 @@ export const PRESETS: readonly Preset[] = [
   preset(
     'soulextract',
     'Soul Extract',
-    'Orbitron titles typing over a pulsing circuit board.',
+    'Orbitron titles behind "//" markers, typing over signal rails with travelling lights.',
     ['soulextract', 'soulextractSource'],
     {
       palette: 'soulextract',
       glow: 'medium',
       frame: 'lines',
       font: 'orbitron',
+      titleStyle: 'slash',
       textEffect: 'sequence',
-      background: 'circuit',
+      background: 'rails',
       backdropGradient: 'deep-space',
       entrance: 'fade',
       stagger: true,
@@ -1290,6 +1341,7 @@ export const PRESETS: readonly Preset[] = [
       glow: 'medium',
       frame: 'nefrex',
       font: 'chakra',
+      titleStyle: 'bar',
       textEffect: 'decipher',
       background: 'data-rain',
       meter: 'segmented',
@@ -1373,6 +1425,30 @@ export const PRESETS: readonly Preset[] = [
       chartGrid: 'dots',
       entrance: 'fade',
       sound: false,
+    }
+  ),
+  preset(
+    'resonance',
+    'Resonance',
+    'Nero frames over a ring that ripples with every interface sound, on Arwes grid lines.',
+    ['arwesFrames', 'glitchy'],
+    {
+      palette: 'aphrodite',
+      glow: 'medium',
+      frame: 'nero',
+      cornerSize: 12,
+      surface: 'glass',
+      surfaceOpacity: 55,
+      font: 'electrolize',
+      titleStyle: 'rule',
+      textEffect: 'sequence',
+      background: 'resonance',
+      backdropGradient: 'nebula',
+      chartStyle: 'area',
+      chartGrid: 'dashed',
+      entrance: 'assemble',
+      stagger: true,
+      effects: { activate: ['sonar'], open: ['zephyr'] },
     }
   ),
 ];

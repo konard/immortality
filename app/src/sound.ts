@@ -484,7 +484,28 @@ function playSound(id: SoundId, gain = 1): void {
   playSpec(SOUND_SPECS[id], audio, bus.input, { gain: level, detune: cents, pan });
 }
 
+export interface SoundCue {
+  event: SoundEventId;
+  /** Stereo position of the pointer that caused the cue, −1 (left) … 1 (right). */
+  pan: number;
+}
+
+const cueListeners = new Set<(cue: SoundCue) => void>();
+
+/**
+ * Subscribes to interaction cues (the "sound resonance" background draws them). Cues are
+ * reported even while sound is muted so the visual echo works on its own. Returns an
+ * unsubscribe function.
+ */
+export function onSoundCue(listener: (cue: SoundCue) => void): () => void {
+  cueListeners.add(listener);
+  return () => {
+    cueListeners.delete(listener);
+  };
+}
+
 function trigger(event: SoundEventId): void {
+  for (const listener of cueListeners) listener({ event, pan: pointerPan });
   if (!enabled || volume <= 0) return;
   const turn = turns[event] ?? 0;
   turns[event] = turn + 1;

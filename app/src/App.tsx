@@ -165,6 +165,7 @@ function Shell({
         data-meter={settings.meter}
         data-font={settings.font}
         data-heading-case={settings.headingCase}
+        data-title={settings.titleStyle}
         data-text-effect={settings.textEffect}
         data-entrance={settings.entrance}
         data-stagger={settings.stagger ? 'on' : 'off'}
@@ -290,6 +291,8 @@ export default function App() {
   const preset = RANGE_PRESETS.find((r) => r.id === rangeId) ?? RANGE_PRESETS[0];
   const fromYear = preset.fromYear(latestYear);
   const latest = series[series.length - 1];
+  // Sparklines show the last few decades behind each headline number.
+  const recent = (points: Point[]) => points.slice(-40).map((point) => point.value);
 
   const toggleSound = () => {
     const next = !uiSettings.sound;
@@ -371,12 +374,14 @@ export default function App() {
             value={latest ? latest.value.toFixed(1) : '—'}
             unit="years"
             hint={latest ? `at birth, ${latest.year}` : undefined}
+            spark={recent(series)}
           />
           <StatTile
             label="Velocity"
             value={lev ? lev.currentVelocity.toFixed(3) : '—'}
             unit="yr / yr"
             hint={`${SMOOTH_WINDOW}-year smoothed`}
+            spark={recent(v)}
           />
           <StatTile
             label="Velocity trend"
@@ -389,10 +394,12 @@ export default function App() {
                 </span>
               ) : undefined
             }
+            spark={recent(a)}
           />
           <StatTile
             label="ETA to escape velocity"
             value={lev?.reached ? 'Reached' : lev?.etaYear ? String(lev.etaYear) : 'Never'}
+            count={false}
             hint={
               lev?.reached
                 ? 'threshold crossed'

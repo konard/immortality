@@ -465,6 +465,28 @@ body {
   color: var(--text-secondary);
 }
 
+/* Inline sparkline of the tile's recent history (thegridcn dashboard stat cards). */
+.stat-spark {
+  display: block;
+  width: 100%;
+  height: 28px;
+  margin-top: 8px;
+  overflow: visible;
+}
+
+.stat-spark-area {
+  fill: color-mix(in srgb, var(--neon) 14%, transparent);
+  stroke: none;
+}
+
+.stat-spark-line {
+  fill: none;
+  stroke: var(--neon);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
 .delta-up {
   color: #0ca30c;
 }
@@ -1323,7 +1345,50 @@ table.data-table {
   box-shadow: 0 0 6px var(--neon-dim);
 }
 
-/* Chamfered SVG frames (octagon, kranox, nefrex): the measured outline is the panel. */
+/* ---------- Title decoration ---------- */
+
+/* Rule: a hairline that runs out from the title and ends in a small block (Arwes frame lines). */
+.app-shell[data-title='rule'] .frame-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-shell[data-title='rule'] .frame-title::after {
+  content: '';
+  flex: 1 1 auto;
+  min-width: 24px;
+  height: 5px;
+  background:
+    linear-gradient(var(--neon), var(--neon)) right center / 12px 5px no-repeat,
+    linear-gradient(90deg, var(--neon-dim), transparent) left center / calc(100% - 18px) 1px
+      no-repeat;
+}
+
+/* Bar: zknet-style tinted header strip with a solid leading bar. */
+.app-shell[data-title='bar'] .frame-title {
+  padding: 3px 8px 3px 10px;
+  border-left: 3px solid var(--neon);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--neon) 16%, transparent),
+    transparent 75%
+  );
+}
+
+/* Slash: Soul Extract-style "//" prefix; also replaces the HUD frame's square marker. */
+.app-shell[data-title='slash'] .frame-title::before {
+  content: '//';
+  width: auto;
+  height: auto;
+  margin-right: 0.5em;
+  background: none;
+  box-shadow: none;
+  color: var(--neon-dim);
+  letter-spacing: 0;
+}
+
+/* Chamfered SVG frames (octagon, kranox, nefrex, nero): the measured outline is the panel. */
 .frame:has(> .frame-shape) {
   background: transparent;
   border-color: transparent;
@@ -1387,6 +1452,32 @@ table.data-table {
 @keyframes corner-fade {
   from {
     opacity: 0;
+  }
+}
+
+/* Nero: a faint box whose solid corner brackets flicker on like Arwes FrameNero. */
+.app-shell[data-frame='nero'] .frame-shape-line {
+  opacity: 0.4;
+}
+
+.app-shell[data-frame='nero'] .frame-shape-accent {
+  stroke-width: 2.5;
+  animation: nero-flicker calc(700ms * var(--motion-scale, 1)) steps(1, end) backwards;
+}
+
+@keyframes nero-flicker {
+  0% {
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+  75%,
+  100% {
+    opacity: 1;
   }
 }
 

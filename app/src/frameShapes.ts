@@ -1,10 +1,10 @@
 // SVG outlines for chamfered panel frames, after Arwes FrameOctagon / FrameKranox /
-// FrameNefrex (https://github.com/arwes/arwes/tree/bdbaa0324900ee978d42036d1304a053c1fe54b5/packages/frames).
+// FrameNefrex / FrameNero (https://github.com/arwes/arwes/tree/bdbaa0324900ee978d42036d1304a053c1fe54b5/packages/frames).
 // Pure geometry so the outlines are testable without a DOM.
 
-export type SvgFrameStyle = 'octagon' | 'kranox' | 'nefrex';
+export type SvgFrameStyle = 'octagon' | 'kranox' | 'nefrex' | 'nero';
 
-export const SVG_FRAME_STYLES: readonly SvgFrameStyle[] = ['octagon', 'kranox', 'nefrex'];
+export const SVG_FRAME_STYLES: readonly SvgFrameStyle[] = ['octagon', 'kranox', 'nefrex', 'nero'];
 
 export interface FrameGeometry {
   /** Closed outline used for the panel fill and its border stroke. */
@@ -84,6 +84,25 @@ export function frameGeometry(
           ],
           false
         ),
+      ],
+    };
+  }
+
+  if (style === 'nero') {
+    // Square box; the corners are solid L brackets, like Arwes FrameNero's corner squares.
+    const arm = Math.max(4, Math.min(c * 1.6, width / 4, height / 4));
+    return {
+      shape: path([
+        [s, s],
+        [w, s],
+        [w, h],
+        [s, h],
+      ]),
+      accents: [
+        path([[s, s + arm], [s, s], [s + arm, s]], false),
+        path([[w - arm, s], [w, s], [w, s + arm]], false),
+        path([[w, h - arm], [w, h], [w - arm, h]], false),
+        path([[s + arm, h], [s, h], [s, h - arm]], false),
       ],
     };
   }

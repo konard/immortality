@@ -13,6 +13,7 @@ const CSS_AXES: Array<[ScalarKey, string]> = [
   ['density', 'data-density'],
   ['font', 'data-font'],
   ['headingCase', 'data-heading-case'],
+  ['titleStyle', 'data-title'],
   ['entrance', 'data-entrance'],
   ['panelShadow', 'data-panel-shadow'],
   ['hoverEffect', 'data-hover'],
