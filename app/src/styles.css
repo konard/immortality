@@ -1625,6 +1625,12 @@ table.data-table {
   letter-spacing: -0.02em;
 }
 
+/* Monospace digits are wider; keep "10.8 % of LEV" on one line in the hero tile. */
+.app-shell[data-font='mono'] .hero-number:not(.gauge-ring-row *),
+.app-shell[data-font='terminal'] .hero-number:not(.gauge-ring-row *) {
+  font-size: 46px;
+}
+
 .app-shell[data-heading-case='normal'] :is(.masthead h1, .frame-title, .settings-header h2) {
   text-transform: none;
   letter-spacing: 0.06em;
@@ -1651,9 +1657,11 @@ table.data-table {
   white-space: pre-wrap;
 }
 
-/* Keep units together so wide typefaces wrap the whole unit, not "yr /" + "yr²". */
+/* Keep units together so wide typefaces wrap the whole unit, not "yr /" + "yr²";
+   inline-block adds a break opportunity between the number and its unit. */
 .hero-number .unit,
 .stat-tile .value .unit {
+  display: inline-block;
   white-space: nowrap;
 }
 
