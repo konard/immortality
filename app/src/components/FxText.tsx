@@ -3,6 +3,9 @@ import { sounds } from '../sound';
 import { decipherFrame, effectDuration, revealOrder, sequenceFrame } from '../textEffects';
 import { motionAllowed, useUiSettings } from '../uiContext';
 
+// Many titles start together; one typing cue per burst is enough.
+let lastTypeCue = 0;
+
 interface FxTextProps {
   text: string;
 }
@@ -29,7 +32,10 @@ export function FxText({ text }: FxTextProps) {
     const start = performance.now();
     let frame = 0;
     let lastPaint = 0;
-    sounds.type();
+    if (start - lastTypeCue > 250) {
+      lastTypeCue = start;
+      sounds.type();
+    }
     const tick = (now: number) => {
       const progress = Math.min(1, (now - start) / duration);
       // ~30 fps is enough for glyph cycling and keeps re-renders cheap.

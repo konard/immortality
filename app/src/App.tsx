@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import {
   acceleration,
   assessLev,
@@ -16,9 +24,15 @@ import { StatTile } from './components/StatTile';
 import { LineChart } from './components/LineChart';
 import { DataTable } from './components/DataTable';
 import { SettingsPanel } from './components/SettingsPanel';
+import { Overlays } from './components/Overlays';
+import { HudBar } from './components/HudBar';
+import { Intro } from './components/Intro';
+import { FxText } from './components/FxText';
+import { UiSettingsContext, motionAllowed } from './uiContext';
 import {
   DEFAULT_SETTINGS,
   SETTINGS_STORAGE_KEY,
+  decodeShareHash,
   parseStoredSettings,
   type UiSettings,
 } from './settings';
@@ -29,12 +43,70 @@ const inRange = (points: Point[], fromYear: number) => points.filter((p) => p.ye
 
 const initialSettings = (): UiSettings => {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS;
+  // A shared `#ui=` link wins over the saved preference (and is then saved).
+  const shared = decodeShareHash(window.location.hash);
+  if (shared) return shared;
   try {
     return parseStoredSettings(window.localStorage.getItem(SETTINGS_STORAGE_KEY));
   } catch {
     return DEFAULT_SETTINGS;
   }
 };
+
+/**
+ * Root element carrying every visual axis as a data attribute or CSS variable, so the
+ * stylesheet can switch looks without React re-rendering the dashboard markup.
+ */
+function Shell({
+  settings,
+  settingsOpen = false,
+  children,
+}: {
+  settings: UiSettings;
+  settingsOpen?: boolean;
+  children: ReactNode;
+}) {
+  const style: Record<string, string> = { '--corner': `${settings.cornerSize}px` };
+  if (settings.animationSpeed !== 100) {
+    style['--motion-scale'] = String(100 / settings.animationSpeed);
+  }
+  if (settings.backgroundIntensity !== 100) {
+    style['--bg-opacity'] = String(Math.min(1, settings.backgroundIntensity / 100));
+    style['--bg-brightness'] = String(Math.max(1, settings.backgroundIntensity / 100));
+  }
+  const classes = ['app-shell'];
+  if (!settings.animations) classes.push('motion-off');
+  if (settingsOpen) classes.push('settings-open');
+  return (
+    <UiSettingsContext.Provider value={settings}>
+      <div
+        className={classes.join(' ')}
+        data-palette={settings.palette}
+        data-glow={settings.glow}
+        data-frame={settings.frame}
+        data-surface={settings.surface}
+        data-density={settings.density}
+        data-meter={settings.meter}
+        data-font={settings.font}
+        data-heading-case={settings.headingCase}
+        data-text-effect={settings.textEffect}
+        data-entrance={settings.entrance}
+        data-stagger={settings.stagger ? 'on' : 'off'}
+        data-chart={settings.chartStyle}
+        data-status-bar={settings.statusBar ? 'on' : 'off'}
+        style={style as CSSProperties}
+      >
+        <Starfield
+          mode={settings.background}
+          animated={settings.animations}
+          palette={settings.palette}
+        />
+        <Overlays />
+        {children}
+      </div>
+    </UiSettingsContext.Provider>
+  );
+}
 
 export default function App() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
@@ -43,6 +115,8 @@ export default function App() {
   const [rangeId, setRangeId] = useState('all');
   const [uiSettings, setUiSettings] = useState<UiSettings>(initialSettings);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // The intro plays once per page load (and on demand from the settings drawer).
+  const [introVisible, setIntroVisible] = useState(() => uiSettings.intro !== 'none');
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
 
   const closeSettings = useCallback(() => {
@@ -62,7 +136,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    sounds.configure(uiSettings.sound, uiSettings.effects);
+    // Drop the applied share link so reloads use the (now saved) preference.
+    if (decodeShareHash(window.location.hash)) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  }, []);
+
+  useEffect(() => {
+    sounds.configure(uiSettings.sound, uiSettings.effects, uiSettings.volume);
     try {
       window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(uiSettings));
     } catch {
@@ -82,24 +163,16 @@ export default function App() {
 
   if (loadError) {
     return (
-      <div
-        className={uiSettings.animations ? 'app-shell' : 'app-shell motion-off'}
-        data-palette={uiSettings.palette}
-      >
-        <Starfield mode={uiSettings.background} animated={uiSettings.animations} />
+      <Shell settings={uiSettings}>
         <div className="layout">
           <p className="load-error">Data link failure — {loadError}</p>
         </div>
-      </div>
+      </Shell>
     );
   }
   if (!snapshot || !analysis) {
     return (
-      <div
-        className={uiSettings.animations ? 'app-shell' : 'app-shell motion-off'}
-        data-palette={uiSettings.palette}
-      >
-        <Starfield mode={uiSettings.background} animated={uiSettings.animations} />
+      <Shell settings={uiSettings}>
         <div className="layout loading-layout">
           <div className="loading" role="status">
             <span className="busy-indicator" aria-hidden="true">
@@ -108,7 +181,7 @@ export default function App() {
             Establishing data link…
           </div>
         </div>
-      </div>
+      </Shell>
     );
   }
 
@@ -125,15 +198,14 @@ export default function App() {
   };
 
   return (
-    <div
-      className={uiSettings.animations ? 'app-shell' : 'app-shell motion-off'}
-      data-palette={uiSettings.palette}
-    >
-      <Starfield mode={uiSettings.background} animated={uiSettings.animations} />
+    <Shell settings={uiSettings} settingsOpen={settingsOpen}>
+      <HudBar entity={entity} year={latestYear} />
       <div className="layout">
         <header className="masthead">
           <div>
-            <h1>Immortality</h1>
+            <h1>
+              <FxText text="Immortality" />
+            </h1>
             <p className="subtitle">Longevity escape velocity monitor · mission year {latestYear}</p>
           </div>
           <div className="header-actions">
@@ -371,7 +443,20 @@ export default function App() {
           setUiSettings(DEFAULT_SETTINGS);
           sounds.select();
         }}
+        onPlayIntro={() => {
+          setSettingsOpen(false);
+          setIntroVisible(true);
+        }}
       />
-    </div>
+      {introVisible && uiSettings.intro !== 'none' && (
+        <Intro
+          mode={uiSettings.intro}
+          speed={uiSettings.animationSpeed}
+          animate={motionAllowed(uiSettings)}
+          onAnswer={(soundOn) => setUiSettings((current) => ({ ...current, sound: soundOn }))}
+          onDone={() => setIntroVisible(false)}
+        />
+      )}
+    </Shell>
   );
 }
