@@ -59,6 +59,13 @@ describe('materials', () => {
     expect(rule).not.toContain('rgba(255, 255, 255');
   });
 
+  it('pins the scrolling drawer material and bottom corners to the viewport', () => {
+    for (const selector of ['.settings-panel > .frame-material {', '.settings-panel > .corner {']) {
+      const block = css.slice(css.indexOf(selector));
+      expect(block.slice(0, block.indexOf('}'))).toContain('position: fixed');
+    }
+  });
+
   it('no longer styles native selects or expandable sections', () => {
     expect(css).not.toMatch(/(^|\s)select\s*\{/m);
     expect(css).not.toContain('panel-details');
@@ -73,5 +80,10 @@ describe('motion off', () => {
       const rule = block.slice(0, block.indexOf('}'));
       expect(rule).toContain('animation-delay: 0s !important');
     }
+  });
+
+  it('stops the typewriter caret blinking', () => {
+    expect(css).toContain('.text-caret {');
+    expect(css).toMatch(/\.motion-off \.text-caret[^{]*\{/);
   });
 });

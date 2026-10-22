@@ -12,8 +12,8 @@ interface FxTextProps {
 
 /**
  * Text with the configured entrance effect: decipher (Arwes), typewriter sequence
- * (Soul Extract) or an RGB-split glitch (glitchy.website). Screen readers always
- * get the final text.
+ * (Soul Extract, with a block caret while it types) or an RGB-split glitch
+ * (glitchy.website). Screen readers always get the final text.
  */
 export function FxText({ text }: FxTextProps) {
   const settings = useUiSettings();
@@ -66,6 +66,9 @@ export function FxText({ text }: FxTextProps) {
     <span className="fx-text">
       <span className="visually-hidden">{text}</span>
       <span aria-hidden="true">{display || ' '}</span>
+      {effect === 'sequence' && display !== text && (
+        <span className="text-caret" aria-hidden="true" />
+      )}
     </span>
   );
 }

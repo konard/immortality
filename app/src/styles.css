@@ -1570,6 +1570,24 @@ table.data-table {
   white-space: pre-wrap;
 }
 
+/* Typewriter caret, shown only while the sequence effect is still typing. */
+.text-caret {
+  display: inline-block;
+  width: 0.55em;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.12em;
+  background: currentColor;
+  box-shadow: 0 0 6px var(--neon-dim);
+  animation: caret-blink 0.9s steps(2, jump-none) infinite;
+}
+
+@keyframes caret-blink {
+  to {
+    opacity: 0.15;
+  }
+}
+
 /* Keep units together so wide typefaces wrap the whole unit, not "yr /" + "yr²";
    inline-block adds a break opportunity between the number and its unit. */
 .hero-number .unit,
@@ -2222,7 +2240,7 @@ table.data-table {
 .material-swatch {
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0.9 0 0 0 -0.32'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --grain-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.06' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.4 0 0 0 0.62'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  --brushed: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.002 0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0.55 0 0 0 -0.16'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --brushed: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.002 0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0.32 0 0 0 -0.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --woodgrain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.004 0.06' numOctaves='4' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.12 0 0 0 0 0.06 0 0 0 0 0.02 1.6 0 0 0 -0.62'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --veins: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='320'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='turbulence' baseFrequency='0.008 0.014' numOctaves='5' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.86 0 0 0 0 0.88 0 0 0 0 0.9 -5 0 0 0 0.62'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --tint: linear-gradient(
@@ -2283,11 +2301,11 @@ table.data-table {
     var(--brushed),
     linear-gradient(
       180deg,
-      #3b4148 0%,
-      #262b31 38%,
-      #30363d 52%,
-      #1f2328 74%,
-      #2a2f35 100%
+      #30353b 0%,
+      #1f2328 38%,
+      #282d33 52%,
+      #191c20 74%,
+      #22262b 100%
     );
 }
 
@@ -2296,7 +2314,7 @@ table.data-table {
   --material:
     var(--brushed),
     radial-gradient(120% 70% at 18% 0%, rgba(255, 226, 150, 0.2), transparent 60%),
-    linear-gradient(165deg, #5b4720 0%, #3b2d12 46%, #4a3918 70%, #2c210c 100%);
+    linear-gradient(165deg, #4a3a1a 0%, #30250f 46%, #3b2e13 70%, #231a0a 100%);
 }
 
 .app-shell[data-surface='copper'],
@@ -2361,8 +2379,23 @@ table.data-table {
 .material-swatch[data-material='concrete'] {
   --material:
     var(--grain-dark),
-    var(--grain),
-    linear-gradient(170deg, #383a3e, #27292c);
+    linear-gradient(170deg, rgba(255, 255, 255, 0.05), transparent 60%),
+    linear-gradient(170deg, #2a2c30, #1d1f22);
+}
+
+/* Textured opaque materials: lift small text off the pattern so it stays readable. */
+.app-shell:is(
+    [data-surface='steel'],
+    [data-surface='brass'],
+    [data-surface='copper'],
+    [data-surface='wood'],
+    [data-surface='marble'],
+    [data-surface='concrete'],
+    [data-surface='carbon']
+  )
+  .frame {
+  --text-muted: var(--text-secondary);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
 }
 
 .frame-material {
@@ -2432,6 +2465,16 @@ table.data-table {
   bottom: 0;
   left: auto;
   width: min(420px, 100vw);
+}
+
+/* Same for the bottom corner brackets, which would otherwise scroll into the middle of it. */
+.settings-panel > .corner {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(420px, 100vw);
+  pointer-events: none;
 }
 
 .material-swatch {
@@ -3099,9 +3142,11 @@ html[data-scrollbar='block']::-webkit-scrollbar-thumb:hover,
 
 .app-shell[data-backdrop='aurora'] .backdrop-gradient {
   background:
-    radial-gradient(70% 45% at 20% 10%, color-mix(in srgb, var(--neon) 18%, transparent), transparent 70%),
-    radial-gradient(60% 40% at 85% 25%, color-mix(in srgb, var(--series-1) 16%, transparent), transparent 70%),
-    linear-gradient(180deg, color-mix(in srgb, var(--neon) 6%, var(--page)), var(--page) 70%);
+    radial-gradient(60% 22% at 30% 14%, rgba(60, 255, 170, 0.2), transparent 70%),
+    radial-gradient(50% 18% at 68% 22%, rgba(150, 90, 255, 0.18), transparent 72%),
+    radial-gradient(70% 30% at 85% 8%, color-mix(in srgb, var(--neon) 22%, transparent), transparent 70%),
+    linear-gradient(172deg, transparent 8%, rgba(40, 220, 160, 0.07) 18%, transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, var(--neon) 8%, var(--page)), var(--page) 70%);
 }
 
 .app-shell[data-backdrop='nebula'] .backdrop-gradient {

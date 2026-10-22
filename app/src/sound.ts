@@ -106,7 +106,7 @@ export const SOUND_SPECS: Record<SoundId, SoundSpec> = {
       tone('sine', 880, 2360, 0.12, 0.007, { delay: 0.02 }),
     ],
   },
-  ion: { voices: [tone('sine', 980, 940, 0.028, 0.009)] },
+  ion: { voices: [tone('sine', 980, 940, 0.028, 0.014)] },
   halo: {
     voices: [tone('sine', 520, 420, 0.09, 0.02), tone('sine', 1040, 840, 0.06, 0.005)],
   },
