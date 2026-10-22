@@ -1084,7 +1084,7 @@ export function coerceSoundList(value: unknown): SoundId[] | undefined {
   const toId = (item: unknown): SoundId | null | undefined => {
     if (typeof item !== 'string') return undefined;
     if (soundIds.has(item)) return item as SoundId;
-    return item in LEGACY_SOUND_IDS ? LEGACY_SOUND_IDS[item] : undefined;
+    return Object.hasOwn(LEGACY_SOUND_IDS, item) ? LEGACY_SOUND_IDS[item] : undefined;
   };
   if (typeof value === 'string') {
     const id = toId(value);
@@ -1168,6 +1168,28 @@ export function migrateLegacySettings(raw: string | null): UiSettings {
   } catch {
     return DEFAULT_SETTINGS;
   }
+}
+
+/** The part of `Storage` the settings need; `window.localStorage` in the app. */
+export type SettingsStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
+
+/**
+ * Reads the saved look. On the first visit after the v2 schema it keeps what the viewer
+ * customized and adopts the new look for everything they never touched. It never writes:
+ * React may call initializers twice, and the old key must survive until the result is saved.
+ */
+export function loadSettings(storage: SettingsStorage): UiSettings {
+  const current = storage.getItem(SETTINGS_STORAGE_KEY);
+  const legacy = storage.getItem(LEGACY_SETTINGS_STORAGE_KEY);
+  return current === null && legacy !== null
+    ? migrateLegacySettings(legacy)
+    : parseStoredSettings(current);
+}
+
+/** Saves the look, then retires the first-release key it has replaced. */
+export function saveSettings(storage: SettingsStorage, settings: UiSettings): void {
+  storage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  storage.removeItem(LEGACY_SETTINGS_STORAGE_KEY);
 }
 
 export const SHARE_HASH_PREFIX = '#ui=';

@@ -33,13 +33,11 @@ import { Select } from './components/Select';
 import { UiSettingsContext, motionAllowed } from './uiContext';
 import {
   DEFAULT_SETTINGS,
-  LEGACY_SETTINGS_STORAGE_KEY,
-  SETTINGS_STORAGE_KEY,
   TRANSLUCENT_SURFACES,
   applySharedLook,
   decodeShareHash,
-  migrateLegacySettings,
-  parseStoredSettings,
+  loadSettings,
+  saveSettings,
   type UiSettings,
 } from './settings';
 
@@ -85,14 +83,7 @@ const initialSettings = (): UiSettings => {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS;
   let stored = DEFAULT_SETTINGS;
   try {
-    const current = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
-    const legacy = window.localStorage.getItem(LEGACY_SETTINGS_STORAGE_KEY);
-    // First visit after the v2 schema: keep what the viewer customized, adopt the new look
-    // for everything they never touched, then retire the old key.
-    stored = current === null && legacy !== null
-      ? migrateLegacySettings(legacy)
-      : parseStoredSettings(current);
-    if (legacy !== null) window.localStorage.removeItem(LEGACY_SETTINGS_STORAGE_KEY);
+    stored = loadSettings(window.localStorage);
   } catch {
     // Storage may be disabled; fall back to the defaults.
   }
@@ -247,7 +238,7 @@ export default function App() {
   useEffect(() => {
     sounds.configure(uiSettings);
     try {
-      window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(uiSettings));
+      saveSettings(window.localStorage, uiSettings);
     } catch {
       // Storage may be disabled; settings still work for this session.
     }

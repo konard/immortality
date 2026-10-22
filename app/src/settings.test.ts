@@ -4,11 +4,13 @@ import {
   AXES,
   AXIS_BY_KEY,
   DEFAULT_SETTINGS,
+  LEGACY_SETTINGS_STORAGE_KEY,
   LEGACY_V1_BASE,
   LEGACY_V1_LOOK,
   MAX_SOUNDS_PER_EVENT,
   PRESETS,
   REFERENCES,
+  SETTINGS_STORAGE_KEY,
   SETTING_GROUPS,
   SHARE_VERSION,
   SOUNDS,
@@ -23,8 +25,10 @@ import {
   diffFromDefaults,
   encodeShareHash,
   isPresetActive,
+  loadSettings,
   parseStoredSettings,
   randomizeSettings,
+  saveSettings,
   type UiSettings,
 } from './settings';
 
@@ -123,6 +127,11 @@ describe('UI settings', () => {
     expect(coerceSoundList(['halo', 'halo', 'nope', 'spark', 7])).toEqual(['halo', 'quartz']);
     expect(coerceSoundList(SOUNDS.map(({ id }) => id))).toHaveLength(MAX_SOUNDS_PER_EVENT);
     expect(coerceSoundList({})).toBeUndefined();
+    // Inherited object keys are not first-release sound ids.
+    for (const key of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) {
+      expect(coerceSoundList(key)).toBeUndefined();
+      expect(coerceSoundList([key, 'halo'])).toEqual(['halo']);
+    }
   });
 
   it('merges a valid saved preference with new defaults', () => {
@@ -155,6 +164,25 @@ describe('UI settings', () => {
     });
     expect(migrateLegacySettings('not-json')).toEqual(DEFAULT_SETTINGS);
     expect(migrateLegacySettings(null)).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it('keeps first-release storage until the migrated look is saved', () => {
+    const items = new Map<string, string>([
+      [LEGACY_SETTINGS_STORAGE_KEY, JSON.stringify({ ...LEGACY_V1_LOOK, palette: 'amber' })],
+    ]);
+    const storage = {
+      getItem: (key: string) => items.get(key) ?? null,
+      setItem: (key: string, value: string) => void items.set(key, value),
+      removeItem: (key: string) => void items.delete(key),
+    };
+    // React StrictMode runs state initializers twice; both reads must see the migration.
+    const first = loadSettings(storage);
+    expect(first.palette).toBe('amber');
+    expect(loadSettings(storage)).toEqual(first);
+    saveSettings(storage, first);
+    expect(items.has(LEGACY_SETTINGS_STORAGE_KEY)).toBe(false);
+    expect(JSON.parse(items.get(SETTINGS_STORAGE_KEY)!)).toEqual(first);
+    expect(loadSettings(storage)).toEqual(first);
   });
 
   it('rejects invalid and stale saved values without breaking the UI', () => {
@@ -298,6 +326,11 @@ describe('share links and randomizer', () => {
     expect(decodeShareHash('#ui=%7Bbroken')).toBeNull();
     expect(decodeShareHash('#ui=%7B%22v%22%3A2%2C%22palette%22%3A%22nope%22%7D')).toEqual(DEFAULT_SETTINGS);
     expect(decodeShareHash('#ui=%7B%22palette%22%3A%22nope%22%7D')).toEqual(LEGACY_V1_BASE);
+    const crafted = { v: 2, palette: 'constructor', effects: { hover: 'constructor', open: ['toString'] } };
+    expect(decodeShareHash('#ui=' + encodeURIComponent(JSON.stringify(crafted)))).toEqual({
+      ...DEFAULT_SETTINGS,
+      effects: { ...DEFAULT_SETTINGS.effects, open: [] },
+    });
   });
 
   it('randomizes visual axes deterministically and keeps comfort settings', () => {
