@@ -87,20 +87,35 @@ A new "Resonance" preset shows ideas 7, 12 and 15 together.
 
 ## 4. Verification
 
-- `npm run build`, `npx tsc --noEmit` and `npx vitest run` in `app/`: 78 tests in 7 files
+- `npm run build`, `npx tsc --noEmit` and `npx vitest run` in `app/`: 79 tests in 7 files
   (analytics, frameShapes, settings, styling, textEffects, sparkline, sound), all passing.
   CI runs the same steps (`.github/workflows/website.yml`).
 - Visual checks in headless Chromium through Playwright. `experiments/preset-gallery.js`
   regenerates every screenshot in `docs/screenshots`: all 12 presets, materials, the open
   select, the data table, drawer tabs, both intros and mobile.
 - Audio: `experiments/sound-render.js` (see R12).
+- A code review of the whole diff found eight bugs, all fixed with regression checks:
+  - share links with inherited keys (`"constructor"`) as sound ids crashed the app;
+  - React StrictMode lost the v1 → v2 migration in dev;
+  - pressing the select list's padding or scrollbar took focus from the button, so Escape
+    closed the drawer;
+  - Tab on the empty "+ Add sound" picker added the first sound;
+  - Space ended a typeahead search;
+  - an interrupted count-up jumped (and in dev never counted);
+  - the hover glow was offset under the text-size zoom;
+  - background speed 0% still moved the CSS grids.
+
+  The first two are unit tests in `settings.test.ts`; the rest were checked in Playwright.
 - Science: `experiments/lev-report.mjs` recomputes the dashboard numbers quoted in
   `science-verification.md`.
 
 ## 5. Known limits
 
 - Headless Chromium draws overlay scrollbars, so the scrollbar skins are not visible in the
-  screenshots. They were checked through computed styles.
+  screenshots. They were checked through computed styles. For the same reason, dragging the
+  select list's scrollbar could not be tested. The list cancels mouse-down to keep focus on
+  the button, the pattern react-select uses with native scrollbars, and hands focus back
+  if a browser focuses the list anyway.
 - Animated effects (the Nero flicker, ripples, count-up) cannot be shown in still screenshots.
 - arwes.dev timed out from this environment, so Arwes was studied from its GitHub source.
 - thegridcn publishes no license: it was used only as a visual reference.
