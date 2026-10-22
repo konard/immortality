@@ -57,7 +57,7 @@ export function LineChart({
   yClamp,
 }: LineChartProps) {
   const settings = useUiSettings();
-  const { chartStyle, chartGrid } = settings;
+  const { chartStyle, chartGrid, chartLineWidth } = settings;
   const drawIn = motionAllowed(settings) && settings.entrance === 'scan';
   const wrapRef = useRef<HTMLDivElement>(null);
   const width = useElementWidth(wrapRef, 640);
@@ -135,7 +135,8 @@ export function LineChart({
 
   const onPointerMove = (event: PointerEvent<SVGSVGElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
-    const px = event.clientX - rect.left;
+    // Map viewport pixels to SVG units (they differ when the text-size zoom is applied).
+    const px = ((event.clientX - rect.left) * width) / (rect.width || width);
     const year = xMin + ((px - MARGIN.left) / geometry.plotW) * (xMax - xMin);
     const index = nearestIndex(year);
     if (index !== hoverIndex) {
@@ -279,7 +280,7 @@ export function LineChart({
               d={path}
               fill="none"
               stroke="var(--series-1)"
-              strokeWidth={7}
+              strokeWidth={chartLineWidth * 3.5}
               strokeOpacity={0.28}
               strokeLinejoin="round"
               strokeLinecap="round"
@@ -292,7 +293,7 @@ export function LineChart({
             d={path}
             fill="none"
             stroke="var(--series-1)"
-            strokeWidth={2}
+            strokeWidth={chartLineWidth}
             strokeLinejoin={chartStyle === 'step' ? 'miter' : 'round'}
             strokeLinecap="round"
             clipPath={`url(#${clipId})`}

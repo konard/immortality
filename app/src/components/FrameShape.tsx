@@ -6,7 +6,10 @@ interface FrameShapeProps {
   cut: number;
 }
 
-/** Measured SVG outline for chamfered frames (Arwes-style); sits behind the panel content. */
+/**
+ * Measured SVG outline for chamfered frames (Arwes-style); sits behind the panel content.
+ * The panel material is clipped to the same path, so glass/steel/wood follow the chamfers.
+ */
 export function FrameShape({ shape, cut }: FrameShapeProps) {
   const ref = useRef<HTMLSpanElement>(null);
   const [size, setSize] = useState<{ width: number; height: number } | null>(null);
@@ -26,6 +29,10 @@ export function FrameShape({ shape, cut }: FrameShapeProps) {
 
   return (
     <span className="frame-shape" ref={ref} aria-hidden="true">
+      <span
+        className="frame-material"
+        style={geometry ? { clipPath: `path('${geometry.shape}')` } : { visibility: 'hidden' }}
+      />
       {size && geometry && (
         <svg width={size.width} height={size.height} viewBox={`0 0 ${size.width} ${size.height}`}>
           <path className="frame-shape-fill" d={geometry.shape} />

@@ -5,8 +5,12 @@
 //   v(t)  — velocity: de/dt, life-expectancy years gained per calendar year
 //   a(t)  — acceleration: dv/dt, change of that velocity per calendar year
 //
-// Longevity escape velocity (LEV) is the point where v(t) >= 1: every calendar
-// year lived adds at least one more year of remaining life expectancy.
+// The dashboard uses v(t) >= 1 as a simple *proxy* for "longevity escape
+// velocity": period life expectancy at birth rising >= 1 year per calendar
+// year. This is not de Grey's actuarial definition (age-specific mortality
+// falling ~10%/yr so that remaining life expectancy at a given age rises),
+// and period e0 reaching 1 yr/yr is neither necessary nor sufficient for it —
+// only an order-of-magnitude check (see docs/case-studies/issue-7).
 
 export interface Point {
   year: number;

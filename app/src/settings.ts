@@ -106,6 +106,22 @@ export const BACKGROUNDS = [
   { id: 'circuit', label: 'Circuit board', source: 'soulextractSource' },
   { id: 'data-rain', label: 'Data rain', source: 'zknet' },
   { id: 'nebula', label: 'Nebula & bokeh', source: 'glitchy' },
+  { id: 'aurora', label: 'Aurora curtains' },
+  { id: 'warp', label: 'Warp drive' },
+  { id: 'hexagons', label: 'Hex lattice', source: 'gridcn' },
+  { id: 'radar', label: 'Radar sweep', source: 'gridcn' },
+  { id: 'constellation', label: 'Constellation network', source: 'zknet' },
+] as const satisfies readonly OptionDef[];
+
+/** Full-screen gradient washes painted behind the background animation. */
+export const BACKDROP_GRADIENTS = [
+  { id: 'none', label: 'None', description: 'Plain page colour (original look).' },
+  { id: 'horizon', label: 'Horizon glow', description: 'A lit horizon under a darkening sky.' },
+  { id: 'deep-space', label: 'Deep space', description: 'Soft radial falloff toward the edges.' },
+  { id: 'aurora', label: 'Aurora wash', description: 'Two-tone light bands from the palette.' },
+  { id: 'nebula', label: 'Nebula wash', description: 'Layered coloured clouds.', source: 'glitchy' },
+  { id: 'sunset', label: 'Synth sunset', description: 'Warm retro-futurist dusk.' },
+  { id: 'abyss', label: 'Abyss', description: 'A deep vertical fade to black.' },
 ] as const satisfies readonly OptionDef[];
 
 export const GLOW_LEVELS = [
@@ -126,11 +142,43 @@ export const FRAME_STYLES = [
   { id: 'plain', label: 'Plain', description: 'A simple bordered panel.' },
 ] as const satisfies readonly OptionDef[];
 
+/**
+ * Panel materials. Every material is drawn on a dedicated `.frame-material` layer, so
+ * its opacity (`surfaceOpacity`) and backdrop blur (`surfaceBlur`) are configurable and
+ * it is clipped to the chamfered SVG outlines as well as the rectangular frames.
+ * Materials are tinted with the active palette so they stay integrated with every skin.
+ */
 export const SURFACES = [
   { id: 'gradient', label: 'Gradient', description: 'Original diagonal panel shading.' },
-  { id: 'glass', label: 'Glass', description: 'Translucent blurred panels.' },
-  { id: 'solid', label: 'Solid', description: 'Opaque flat panels.' },
+  { id: 'glass', label: 'Glass', description: 'Clear blurred glass with a specular edge.' },
+  { id: 'frosted', label: 'Frosted', description: 'Milky, heavily diffused glass with grain.' },
+  { id: 'solid', label: 'Flat', description: 'Opaque flat panels.' },
   { id: 'transparent', label: 'Transparent', description: 'Outline-only panels over the scene.' },
+  { id: 'steel', label: 'Brushed steel', description: 'Dark anisotropic brushed metal.' },
+  { id: 'brass', label: 'Brass', description: 'Warm polished brass plate.' },
+  { id: 'copper', label: 'Copper', description: 'Oxidised copper with a rose sheen.' },
+  { id: 'wood', label: 'Walnut wood', description: 'Dark walnut veneer with growth rings.' },
+  { id: 'carbon', label: 'Carbon fibre', description: 'Woven twill carbon weave.' },
+  { id: 'holographic', label: 'Holographic', description: 'Iridescent foil that shifts with the palette.' },
+  { id: 'marble', label: 'Black marble', description: 'Polished stone with soft veins.' },
+  { id: 'concrete', label: 'Concrete', description: 'Matte speckled cast concrete.' },
+] as const satisfies readonly OptionDef[];
+
+/** Materials that are see-through by design and therefore always get a backdrop blur. */
+export const TRANSLUCENT_SURFACES: ReadonlySet<string> = new Set(['glass', 'frosted', 'holographic']);
+
+export const PANEL_SHADOWS = [
+  { id: 'none', label: 'None' },
+  { id: 'soft', label: 'Soft', description: 'A short ambient drop shadow.' },
+  { id: 'deep', label: 'Deep', description: 'Panels float high above the scene.' },
+  { id: 'neon', label: 'Neon halo', description: 'A coloured light halo instead of a shadow.' },
+] as const satisfies readonly OptionDef[];
+
+export const HOVER_EFFECTS = [
+  { id: 'none', label: 'None' },
+  { id: 'glow', label: 'Glow', description: 'Panels light up under the pointer.' },
+  { id: 'lift', label: 'Lift', description: 'Panels rise slightly under the pointer.' },
+  { id: 'sweep', label: 'Light sweep', description: 'A specular band crosses the panel.', source: 'gridcn' },
 ] as const satisfies readonly OptionDef[];
 
 export const DENSITIES = [
@@ -213,6 +261,25 @@ export const CHART_GRIDS = [
   { id: 'none', label: 'None' },
 ] as const satisfies readonly OptionDef[];
 
+export const CURSORS = [
+  { id: 'system', label: 'System' },
+  { id: 'crosshair', label: 'Crosshair' },
+  { id: 'reticle', label: 'HUD reticle', description: 'A palette-coloured targeting reticle.', source: 'arwes' },
+] as const satisfies readonly OptionDef[];
+
+export const TABLE_STYLES = [
+  { id: 'lined', label: 'Lined', description: 'Hairline row separators.' },
+  { id: 'zebra', label: 'Zebra', description: 'Alternating tinted rows.' },
+  { id: 'grid', label: 'Grid', description: 'Full cell grid.', source: 'gridcnDashboard' },
+  { id: 'terminal', label: 'Terminal', description: 'Monospace rows with a scan highlight.', source: 'zknet' },
+] as const satisfies readonly OptionDef[];
+
+export const SCROLLBAR_STYLES = [
+  { id: 'thin', label: 'Thin', description: 'A slim palette-coloured thumb.' },
+  { id: 'rail', label: 'HUD rail', description: 'A framed track with a glowing thumb.', source: 'gridcn' },
+  { id: 'block', label: 'Block', description: 'A wide segmented thumb.' },
+] as const satisfies readonly OptionDef[];
+
 export const ENTRANCES = [
   { id: 'assemble', label: 'Assemble', description: 'Original reveal with drawn corners.', source: 'arwesFrames' },
   { id: 'fade', label: 'Fade' },
@@ -224,45 +291,86 @@ export const ENTRANCES = [
 const ARWES_BLEEP_SOURCE = REFERENCES.arwesBleeps.url;
 const SOULEXTRACT_SOUNDS =
   'https://github.com/soulextract/soulextract.com/tree/633d5a57160fb8e3960c03b641aa4c27941bafda/static/sounds';
+const GLITCHY_SOURCE = REFERENCES.glitchy.url;
+const ZKNET_SOURCE = REFERENCES.zknet.url;
+const WEB_AUDIO_SOURCE = 'https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API';
 
-export const SOUND_PRESETS = [
-  { id: 'spark', label: 'Spark', sourceLabel: 'Arwes bleep source', sourceUrl: ARWES_BLEEP_SOURCE },
-  {
-    id: 'confirm',
-    label: 'Confirm',
-    sourceLabel: 'glitchy.website reference',
-    sourceUrl: 'https://glitchy.website/',
-  },
-  {
-    id: 'transmit',
-    label: 'Transmit',
-    sourceLabel: 'glitchy.website reference',
-    sourceUrl: 'https://glitchy.website/',
-  },
-  { id: 'scanner', label: 'Scanner', sourceLabel: 'Arwes bleep source', sourceUrl: ARWES_BLEEP_SOURCE },
-  { id: 'soft', label: 'Soft tone', sourceLabel: 'Arwes bleep source', sourceUrl: ARWES_BLEEP_SOURCE },
-  { id: 'pulse', label: 'Low pulse', sourceLabel: 'Arwes bleep source', sourceUrl: ARWES_BLEEP_SOURCE },
-  { id: 'typing', label: 'Typing', sourceLabel: 'Soul Extract sounds', sourceUrl: SOULEXTRACT_SOUNDS },
-  { id: 'deploy', label: 'Deploy', sourceLabel: 'Soul Extract sounds', sourceUrl: SOULEXTRACT_SOUNDS },
-  { id: 'expand', label: 'Expand', sourceLabel: 'Soul Extract sounds', sourceUrl: SOULEXTRACT_SOUNDS },
-  {
-    id: 'static',
-    label: 'Static burst',
-    sourceLabel: 'glitchy.website reference',
-    sourceUrl: 'https://glitchy.website/',
-  },
-  { id: 'silent', label: 'Silent', sourceLabel: null, sourceUrl: null },
+/**
+ * Synthesized sound library. Names are neutral (materials, minerals and sky objects)
+ * rather than tied to an action, because any sound can be mapped to any interaction
+ * and several sounds can be mapped to the same one.
+ */
+export const SOUNDS = [
+  { id: 'quartz', label: 'Quartz', character: 'Glassy high tick', sourceLabel: 'Arwes bleeps', sourceUrl: ARWES_BLEEP_SOURCE },
+  { id: 'cobalt', label: 'Cobalt', character: 'Square blip falling a fifth', sourceLabel: 'glitchy.website', sourceUrl: GLITCHY_SOURCE },
+  { id: 'comet', label: 'Comet', character: 'Rising triangle sweep', sourceLabel: 'glitchy.website', sourceUrl: GLITCHY_SOURCE },
+  { id: 'ion', label: 'Ion', character: 'Minimal sine tick', sourceLabel: 'Arwes bleeps', sourceUrl: ARWES_BLEEP_SOURCE },
+  { id: 'halo', label: 'Halo', character: 'Soft rounded drop', sourceLabel: 'Arwes bleeps', sourceUrl: ARWES_BLEEP_SOURCE },
+  { id: 'tide', label: 'Tide', character: 'Low rising swell', sourceLabel: 'Arwes bleeps', sourceUrl: ARWES_BLEEP_SOURCE },
+  { id: 'mica', label: 'Mica', character: 'Burst of key-like ticks', sourceLabel: 'Soul Extract sounds', sourceUrl: SOULEXTRACT_SOUNDS },
+  { id: 'nova', label: 'Nova', character: 'Double rising power-up chirp', sourceLabel: 'Soul Extract sounds', sourceUrl: SOULEXTRACT_SOUNDS },
+  { id: 'zephyr', label: 'Zephyr', character: 'Airy upward whoosh', sourceLabel: 'Soul Extract sounds', sourceUrl: SOULEXTRACT_SOUNDS },
+  { id: 'ember', label: 'Ember', character: 'Band-passed static crackle', sourceLabel: 'glitchy.website', sourceUrl: GLITCHY_SOURCE },
+  { id: 'prism', label: 'Prism', character: 'FM bell with shimmer', sourceLabel: 'Arwes bleeps', sourceUrl: ARWES_BLEEP_SOURCE },
+  { id: 'glacier', label: 'Glacier', character: 'Crystalline two-note interval', sourceLabel: 'Arwes bleeps', sourceUrl: ARWES_BLEEP_SOURCE },
+  { id: 'pulsar', label: 'Pulsar', character: 'Sub-bass thump with a click', sourceLabel: 'Arwes bleeps', sourceUrl: ARWES_BLEEP_SOURCE },
+  { id: 'orbit', label: 'Orbit', character: 'Stereo ping-pong blips', sourceLabel: 'Web Audio synthesis', sourceUrl: WEB_AUDIO_SOURCE },
+  { id: 'vapor', label: 'Vapor', character: 'Falling filtered breath', sourceLabel: 'Soul Extract sounds', sourceUrl: SOULEXTRACT_SOUNDS },
+  { id: 'cinder', label: 'Cinder', character: 'Sparse crackling grains', sourceLabel: 'glitchy.website', sourceUrl: GLITCHY_SOURCE },
+  { id: 'tungsten', label: 'Tungsten', character: 'Inharmonic metallic ping', sourceLabel: 'Arwes bleeps', sourceUrl: ARWES_BLEEP_SOURCE },
+  { id: 'helix', label: 'Helix', character: 'Arpeggiated triad sparkle', sourceLabel: 'Soul Extract sounds', sourceUrl: SOULEXTRACT_SOUNDS },
+  { id: 'drift', label: 'Drift', character: 'Detuned falling pad blip', sourceLabel: 'Web Audio synthesis', sourceUrl: WEB_AUDIO_SOURCE },
+  { id: 'basalt', label: 'Basalt', character: 'Deep woody knock', sourceLabel: 'Web Audio synthesis', sourceUrl: WEB_AUDIO_SOURCE },
+  { id: 'flint', label: 'Flint', character: 'Crisp mechanical switch', sourceLabel: 'Web Audio synthesis', sourceUrl: WEB_AUDIO_SOURCE },
+  { id: 'opal', label: 'Opal', character: 'Soft marimba mallet', sourceLabel: 'Web Audio synthesis', sourceUrl: WEB_AUDIO_SOURCE },
+  { id: 'lumen', label: 'Lumen', character: 'Bright major-third chime', sourceLabel: 'Web Audio synthesis', sourceUrl: WEB_AUDIO_SOURCE },
+  { id: 'sonar', label: 'Sonar', character: 'Ping with an echo tail', sourceLabel: 'ZKN app chain', sourceUrl: ZKNET_SOURCE },
+  { id: 'vesper', label: 'Vesper', character: 'Slow evening pad swell', sourceLabel: 'Soul Extract sounds', sourceUrl: SOULEXTRACT_SOUNDS },
+  { id: 'relay', label: 'Relay', character: 'Latching double click', sourceLabel: 'Web Audio synthesis', sourceUrl: WEB_AUDIO_SOURCE },
 ] as const;
+
+/** Sound ids of the first release, which were named after the action they played on. */
+export const LEGACY_SOUND_IDS: Readonly<Record<string, SoundId | null>> = {
+  spark: 'quartz',
+  confirm: 'cobalt',
+  transmit: 'comet',
+  scanner: 'ion',
+  soft: 'halo',
+  pulse: 'tide',
+  typing: 'mica',
+  deploy: 'nova',
+  expand: 'zephyr',
+  static: 'ember',
+  silent: null,
+};
 
 export const SOUND_EVENTS = [
   { id: 'hover', label: 'Hover' },
   { id: 'activate', label: 'Buttons' },
-  { id: 'select', label: 'Selections' },
+  { id: 'toggle', label: 'Switches' },
+  { id: 'select', label: 'Selections & sliders' },
   { id: 'scan', label: 'Chart scanner' },
-  { id: 'open', label: 'Panels & details' },
+  { id: 'open', label: 'Open menus & panels' },
+  { id: 'close', label: 'Close menus & panels' },
   { id: 'type', label: 'Text effects' },
   { id: 'intro', label: 'Intro & boot' },
+  { id: 'notify', label: 'Notifications' },
 ] as const;
+
+/** At most this many sounds can be layered or rotated on one interaction. */
+export const MAX_SOUNDS_PER_EVENT = 6;
+
+export const SOUND_MODES = [
+  { id: 'random', label: 'Random', description: 'Each interaction picks one of its sounds at random.' },
+  { id: 'cycle', label: 'Cycle', description: 'Each interaction plays its sounds in turn.' },
+  { id: 'layer', label: 'Layer', description: 'All sounds of an interaction play together.' },
+] as const satisfies readonly OptionDef[];
+
+export const SOUND_TONES = [
+  { id: 'warm', label: 'Warm', description: 'Rolled-off highs.' },
+  { id: 'neutral', label: 'Neutral' },
+  { id: 'bright', label: 'Bright', description: 'Extra air and presence.' },
+] as const satisfies readonly OptionDef[];
 
 export type PaletteId = (typeof PALETTES)[number]['id'];
 export type BackgroundId = (typeof BACKGROUNDS)[number]['id'];
@@ -279,28 +387,44 @@ export type IntroId = (typeof INTROS)[number]['id'];
 export type ChartStyleId = (typeof CHART_STYLES)[number]['id'];
 export type ChartGridId = (typeof CHART_GRIDS)[number]['id'];
 export type EntranceId = (typeof ENTRANCES)[number]['id'];
-export type SoundPresetId = (typeof SOUND_PRESETS)[number]['id'];
+export type PanelShadowId = (typeof PANEL_SHADOWS)[number]['id'];
+export type HoverEffectId = (typeof HOVER_EFFECTS)[number]['id'];
+export type BackdropGradientId = (typeof BACKDROP_GRADIENTS)[number]['id'];
+export type CursorId = (typeof CURSORS)[number]['id'];
+export type TableStyleId = (typeof TABLE_STYLES)[number]['id'];
+export type ScrollbarStyleId = (typeof SCROLLBAR_STYLES)[number]['id'];
+export type SoundId = (typeof SOUNDS)[number]['id'];
 export type SoundEventId = (typeof SOUND_EVENTS)[number]['id'];
+export type SoundModeId = (typeof SOUND_MODES)[number]['id'];
+export type SoundToneId = (typeof SOUND_TONES)[number]['id'];
 
-export type SoundEffects = Record<SoundEventId, SoundPresetId>;
+/** Sounds played for each interaction; an empty list keeps that interaction silent. */
+export type SoundEffects = Record<SoundEventId, readonly SoundId[]>;
 
 export interface UiSettings {
   // Color
   palette: PaletteId;
-  // Surfaces
+  // Panels & materials
   glow: GlowId;
   frame: FrameStyleId;
   cornerSize: number;
+  borderWidth: number;
   surface: SurfaceId;
+  surfaceOpacity: number;
+  surfaceBlur: number;
+  panelShadow: PanelShadowId;
   density: DensityId;
   meter: MeterStyleId;
   // Typography
   font: FontId;
+  fontScale: number;
   headingCase: HeadingCaseId;
   textEffect: TextEffectId;
   // Scene
   background: BackgroundId;
+  backdropGradient: BackdropGradientId;
   backgroundIntensity: number;
+  backgroundSpeed: number;
   scanlines: ScanlineId;
   scanSweep: boolean;
   vignette: boolean;
@@ -312,6 +436,12 @@ export interface UiSettings {
   intro: IntroId;
   chartStyle: ChartStyleId;
   chartGrid: ChartGridId;
+  chartLineWidth: number;
+  // Controls & data
+  hoverEffect: HoverEffectId;
+  cursor: CursorId;
+  tableStyle: TableStyleId;
+  scrollbarStyle: ScrollbarStyleId;
   // Motion
   animations: boolean;
   entrance: EntranceId;
@@ -320,50 +450,121 @@ export interface UiSettings {
   // Audio
   sound: boolean;
   volume: number;
+  soundMode: SoundModeId;
+  soundTone: SoundToneId;
+  reverb: number;
+  pitchVariance: number;
+  stereo: boolean;
   effects: SoundEffects;
 }
 
-export const SETTINGS_STORAGE_KEY = 'immortality.ui-settings.v1';
+/** Version 2 stores the redesigned schema (sound lists, materials, new defaults). */
+export const SETTINGS_STORAGE_KEY = 'immortality.ui-settings.v2';
+/** First-release storage key; read once to migrate customizations, then removed. */
+export const LEGACY_SETTINGS_STORAGE_KEY = 'immortality.ui-settings.v1';
 
-/** Defaults reproduce the original dashboard exactly; every new axis is opt-in. */
+/**
+ * Default look requested in issue #7: Poseidon blue, medium glow, transparent panels,
+ * spacious layout, segmented meters, Orbitron type, typewriter titles, horizon grid,
+ * status rail, boot intro, area charts with dashed grids and staggered scan entrances.
+ */
 export const DEFAULT_SETTINGS: UiSettings = {
-  palette: 'mission',
-  glow: 'light',
+  palette: 'poseidon',
+  glow: 'medium',
   frame: 'corners',
   cornerSize: 14,
-  surface: 'gradient',
-  density: 'comfortable',
-  meter: 'bar',
-  font: 'system',
+  borderWidth: 1,
+  surface: 'transparent',
+  surfaceOpacity: 100,
+  surfaceBlur: 12,
+  panelShadow: 'none',
+  density: 'spacious',
+  meter: 'segmented',
+  font: 'orbitron',
+  fontScale: 100,
   headingCase: 'upper',
-  textEffect: 'none',
-  background: 'stars',
+  textEffect: 'sequence',
+  background: 'perspective-grid',
+  backdropGradient: 'none',
   backgroundIntensity: 100,
+  backgroundSpeed: 100,
   scanlines: 'off',
   scanSweep: false,
   vignette: false,
   flicker: false,
   noise: false,
   illuminator: false,
+  statusBar: true,
+  intro: 'boot',
+  chartStyle: 'area',
+  chartGrid: 'dashed',
+  chartLineWidth: 2,
+  hoverEffect: 'glow',
+  cursor: 'system',
+  tableStyle: 'lined',
+  scrollbarStyle: 'thin',
+  animations: true,
+  entrance: 'scan',
+  stagger: true,
+  animationSpeed: 100,
+  sound: true,
+  volume: 100,
+  soundMode: 'random',
+  soundTone: 'neutral',
+  reverb: 20,
+  pitchVariance: 15,
+  stereo: true,
+  effects: {
+    hover: ['quartz'],
+    activate: ['cobalt', 'relay'],
+    toggle: ['flint'],
+    select: ['comet'],
+    scan: ['ion'],
+    open: ['zephyr'],
+    close: ['vapor'],
+    type: [],
+    intro: ['nova'],
+    notify: ['lumen'],
+  },
+};
+
+/** The original (first release) values of the axes whose default changed in issue #7. */
+export const LEGACY_V1_LOOK = {
+  palette: 'mission',
+  glow: 'light',
+  surface: 'gradient',
+  density: 'comfortable',
+  meter: 'bar',
+  font: 'system',
+  textEffect: 'none',
+  background: 'stars',
   statusBar: false,
   intro: 'none',
   chartStyle: 'line',
   chartGrid: 'solid',
-  animations: true,
   entrance: 'assemble',
   stagger: false,
-  animationSpeed: 100,
-  sound: true,
-  volume: 100,
-  effects: {
-    hover: 'spark',
-    activate: 'confirm',
-    select: 'transmit',
-    scan: 'scanner',
-    open: 'silent',
-    type: 'silent',
-    intro: 'deploy',
-  },
+} as const satisfies Partial<UiSettings>;
+
+/** Base for unversioned (first release) share links: they encoded a diff against this look. */
+export const LEGACY_V1_BASE: UiSettings = {
+  ...DEFAULT_SETTINGS,
+  ...LEGACY_V1_LOOK,
+  effects: { ...DEFAULT_SETTINGS.effects },
+};
+
+/** First-release sound map, translated to the renamed sounds. */
+const LEGACY_V1_EFFECTS: SoundEffects = {
+  hover: ['quartz'],
+  activate: ['cobalt'],
+  toggle: ['cobalt'],
+  select: ['comet'],
+  scan: ['ion'],
+  open: [],
+  close: [],
+  type: [],
+  intro: ['nova'],
+  notify: [],
 };
 
 export type ScalarKey = Exclude<keyof UiSettings, 'effects'>;
@@ -374,6 +575,7 @@ export const SETTING_GROUPS = [
   { id: 'type', label: 'Type & text' },
   { id: 'scene', label: 'Scene & overlays' },
   { id: 'hud', label: 'HUD & charts' },
+  { id: 'controls', label: 'Controls & data' },
   { id: 'motion', label: 'Motion' },
   { id: 'audio', label: 'Audio' },
 ] as const;
@@ -391,7 +593,7 @@ interface AxisBase {
 export interface ChoiceAxis extends AxisBase {
   kind: 'choice';
   options: readonly OptionDef[];
-  /** Render as a grid of swatch buttons instead of a select. */
+  /** Render as a grid of swatch buttons instead of a dropdown. */
   display?: 'buttons' | 'select';
 }
 
@@ -419,6 +621,37 @@ export const AXES: readonly Axis[] = [
     options: PALETTES,
     display: 'buttons',
     sources: ['gridcn', 'glitchy', 'soulextractSource', 'zknet'],
+  },
+  {
+    key: 'surface',
+    kind: 'choice',
+    label: 'Panel material',
+    group: 'surface',
+    options: SURFACES,
+    display: 'buttons',
+    description: 'Every material is tinted by the color system.',
+  },
+  {
+    key: 'surfaceOpacity',
+    kind: 'range',
+    label: 'Material opacity',
+    group: 'surface',
+    min: 0,
+    max: 100,
+    step: 5,
+    unit: '%',
+    description: 'Scales the opacity of glass, flat and every other material; lower values show more of the scene.',
+  },
+  {
+    key: 'surfaceBlur',
+    kind: 'range',
+    label: 'Backdrop blur',
+    group: 'surface',
+    min: 0,
+    max: 32,
+    step: 2,
+    unit: 'px',
+    description: 'Blurs the scene behind see-through materials.',
   },
   {
     key: 'glow',
@@ -449,14 +682,32 @@ export const AXES: readonly Axis[] = [
     unit: 'px',
     sources: ['gridcnSource'],
   },
-  { key: 'surface', kind: 'choice', label: 'Panel surface', group: 'surface', options: SURFACES },
-  { key: 'density', kind: 'choice', label: 'Layout density', group: 'surface', options: DENSITIES },
+  {
+    key: 'borderWidth',
+    kind: 'range',
+    label: 'Border width',
+    group: 'surface',
+    min: 0,
+    max: 4,
+    step: 0.5,
+    unit: 'px',
+  },
+  {
+    key: 'panelShadow',
+    kind: 'choice',
+    label: 'Panel shadow',
+    group: 'surface',
+    options: PANEL_SHADOWS,
+    display: 'buttons',
+  },
+  { key: 'density', kind: 'choice', label: 'Layout density', group: 'surface', options: DENSITIES, display: 'buttons' },
   {
     key: 'meter',
     kind: 'choice',
     label: 'Progress meter',
     group: 'surface',
     options: METER_STYLES,
+    display: 'buttons',
     sources: ['gridcnDashboard'],
   },
   {
@@ -468,7 +719,24 @@ export const AXES: readonly Axis[] = [
     display: 'buttons',
     sources: ['soulextractSource', 'zknet', 'glitchy', 'gridcn'],
   },
-  { key: 'headingCase', kind: 'choice', label: 'Heading case', group: 'type', options: HEADING_CASES },
+  {
+    key: 'fontScale',
+    kind: 'range',
+    label: 'Text size',
+    group: 'type',
+    min: 85,
+    max: 130,
+    step: 5,
+    unit: '%',
+  },
+  {
+    key: 'headingCase',
+    kind: 'choice',
+    label: 'Heading case',
+    group: 'type',
+    options: HEADING_CASES,
+    display: 'buttons',
+  },
   {
     key: 'textEffect',
     kind: 'choice',
@@ -487,6 +755,14 @@ export const AXES: readonly Axis[] = [
     sources: ['arwesBgs', 'soulextractSource', 'zknet', 'glitchy', 'gridcn'],
   },
   {
+    key: 'backdropGradient',
+    kind: 'choice',
+    label: 'Backdrop gradient',
+    group: 'scene',
+    options: BACKDROP_GRADIENTS,
+    description: 'A dithered colour wash painted behind the background animation.',
+  },
+  {
     key: 'backgroundIntensity',
     kind: 'range',
     label: 'Background intensity',
@@ -495,6 +771,17 @@ export const AXES: readonly Axis[] = [
     max: 200,
     step: 10,
     unit: '%',
+  },
+  {
+    key: 'backgroundSpeed',
+    kind: 'range',
+    label: 'Background speed',
+    group: 'scene',
+    min: 0,
+    max: 300,
+    step: 25,
+    unit: '%',
+    description: '0% freezes the background while keeping the other animations.',
   },
   {
     key: 'scanlines',
@@ -513,7 +800,14 @@ export const AXES: readonly Axis[] = [
     sources: ['gridcnSource'],
   },
   { key: 'vignette', kind: 'toggle', label: 'Vignette', group: 'scene', sources: ['glitchy'] },
-  { key: 'flicker', kind: 'toggle', label: 'Screen flicker', group: 'scene', sources: ['glitchy'] },
+  {
+    key: 'flicker',
+    kind: 'toggle',
+    label: 'Screen flicker',
+    group: 'scene',
+    description: 'A faint, smooth brightness breathing of the whole screen.',
+    sources: ['glitchy'],
+  },
   { key: 'noise', kind: 'toggle', label: 'Film grain', group: 'scene', sources: ['glitchy'] },
   {
     key: 'illuminator',
@@ -537,6 +831,7 @@ export const AXES: readonly Axis[] = [
     label: 'Start-up intro',
     group: 'hud',
     options: INTROS,
+    display: 'buttons',
     description: 'Shown on the next page load.',
     sources: ['gridcn', 'glitchy'],
   },
@@ -549,7 +844,56 @@ export const AXES: readonly Axis[] = [
     display: 'buttons',
     sources: ['gridcnAnalytics'],
   },
-  { key: 'chartGrid', kind: 'choice', label: 'Chart gridlines', group: 'hud', options: CHART_GRIDS },
+  {
+    key: 'chartGrid',
+    kind: 'choice',
+    label: 'Chart gridlines',
+    group: 'hud',
+    options: CHART_GRIDS,
+    display: 'buttons',
+  },
+  {
+    key: 'chartLineWidth',
+    kind: 'range',
+    label: 'Chart line width',
+    group: 'hud',
+    min: 1,
+    max: 4,
+    step: 0.5,
+    unit: 'px',
+  },
+  {
+    key: 'hoverEffect',
+    kind: 'choice',
+    label: 'Panel hover',
+    group: 'controls',
+    options: HOVER_EFFECTS,
+    display: 'buttons',
+  },
+  {
+    key: 'cursor',
+    kind: 'choice',
+    label: 'Pointer cursor',
+    group: 'controls',
+    options: CURSORS,
+    display: 'buttons',
+  },
+  {
+    key: 'tableStyle',
+    kind: 'choice',
+    label: 'Data table',
+    group: 'controls',
+    options: TABLE_STYLES,
+    display: 'buttons',
+  },
+  {
+    key: 'scrollbarStyle',
+    kind: 'choice',
+    label: 'Scrollbars',
+    group: 'controls',
+    options: SCROLLBAR_STYLES,
+    display: 'buttons',
+  },
   { key: 'animations', kind: 'toggle', label: 'Animations', group: 'motion' },
   {
     key: 'entrance',
@@ -557,6 +901,7 @@ export const AXES: readonly Axis[] = [
     label: 'Panel entrance',
     group: 'motion',
     options: ENTRANCES,
+    display: 'buttons',
     sources: ['arwesFrames', 'gridcn', 'glitchy'],
   },
   {
@@ -589,13 +934,57 @@ export const AXES: readonly Axis[] = [
     unit: '%',
     sources: ['soulextractSource'],
   },
+  {
+    key: 'soundMode',
+    kind: 'choice',
+    label: 'Multiple sounds per action',
+    group: 'audio',
+    options: SOUND_MODES,
+    display: 'buttons',
+  },
+  {
+    key: 'soundTone',
+    kind: 'choice',
+    label: 'Tone',
+    group: 'audio',
+    options: SOUND_TONES,
+    display: 'buttons',
+  },
+  {
+    key: 'reverb',
+    kind: 'range',
+    label: 'Room reverb',
+    group: 'audio',
+    min: 0,
+    max: 100,
+    step: 5,
+    unit: '%',
+  },
+  {
+    key: 'pitchVariance',
+    kind: 'range',
+    label: 'Pitch variation',
+    group: 'audio',
+    min: 0,
+    max: 100,
+    step: 5,
+    unit: ' ct',
+    description: 'Random detune per play so repeated sounds do not feel mechanical.',
+  },
+  {
+    key: 'stereo',
+    kind: 'toggle',
+    label: 'Positional stereo',
+    group: 'audio',
+    description: 'Pans each sound toward the pointer position.',
+  },
 ];
 
 export const AXIS_BY_KEY: Readonly<Record<ScalarKey, Axis>> = Object.fromEntries(
   AXES.map((axis) => [axis.key, axis])
 ) as Record<ScalarKey, Axis>;
 
-const soundPresetIds = new Set<string>(SOUND_PRESETS.map(({ id }) => id));
+const soundIds = new Set<string>(SOUNDS.map(({ id }) => id));
 
 /** Returns `value` if it is valid for `axis`, otherwise `undefined`. */
 export function coerceAxisValue(axis: Axis, value: unknown): string | number | boolean | undefined {
@@ -607,6 +996,30 @@ export function coerceAxisValue(axis: Axis, value: unknown): string | number | b
   return typeof value === 'string' && axis.options.some(({ id }) => id === value)
     ? value
     : undefined;
+}
+
+/**
+ * Normalizes one interaction's sounds: accepts a list of sound ids or a single
+ * first-release id (`'confirm'`, `'silent'`, …), drops unknown ids and duplicates.
+ */
+export function coerceSoundList(value: unknown): SoundId[] | undefined {
+  const toId = (item: unknown): SoundId | null | undefined => {
+    if (typeof item !== 'string') return undefined;
+    if (soundIds.has(item)) return item as SoundId;
+    return item in LEGACY_SOUND_IDS ? LEGACY_SOUND_IDS[item] : undefined;
+  };
+  if (typeof value === 'string') {
+    const id = toId(value);
+    if (id === undefined) return undefined;
+    return id === null ? [] : [id];
+  }
+  if (!Array.isArray(value)) return undefined;
+  const list: SoundId[] = [];
+  for (const item of value) {
+    const id = toId(item);
+    if (id && !list.includes(id)) list.push(id);
+  }
+  return list.slice(0, MAX_SOUNDS_PER_EVENT);
 }
 
 /** Merges a partial, untrusted settings object over `base`, dropping invalid values. */
@@ -626,12 +1039,31 @@ export function mergeSettings(base: UiSettings, raw: unknown): UiSettings {
       ? (saved.effects as Record<string, unknown>)
       : {};
   for (const { id } of SOUND_EVENTS) {
-    const value = savedEffects[id];
-    if (typeof value === 'string' && soundPresetIds.has(value)) {
-      next.effects[id] = value as SoundPresetId;
-    }
+    const list = coerceSoundList(savedEffects[id]);
+    if (list) next.effects[id] = list;
   }
   return next;
+}
+
+const sameSounds = (a: readonly SoundId[], b: readonly SoundId[]) => a.join() === b.join();
+
+/** Only the values of `settings` that differ from `base`. */
+export function diffSettings(settings: UiSettings, base: UiSettings): Partial<UiSettings> {
+  const diff: Record<string, unknown> = {};
+  for (const axis of AXES) {
+    if (settings[axis.key] !== base[axis.key]) diff[axis.key] = settings[axis.key];
+  }
+  const effects: Partial<SoundEffects> = {};
+  for (const { id } of SOUND_EVENTS) {
+    if (!sameSounds(settings.effects[id], base.effects[id])) effects[id] = settings.effects[id];
+  }
+  if (Object.keys(effects).length > 0) diff.effects = effects;
+  return diff as Partial<UiSettings>;
+}
+
+/** Only the values that differ from the defaults — compact for share links. */
+export function diffFromDefaults(settings: UiSettings): Partial<UiSettings> {
+  return diffSettings(settings, DEFAULT_SETTINGS);
 }
 
 /** Safely upgrades a persisted, potentially stale settings object. */
@@ -644,35 +1076,45 @@ export function parseStoredSettings(raw: string | null): UiSettings {
   }
 }
 
-/** Only the values that differ from the defaults — compact for share links. */
-export function diffFromDefaults(settings: UiSettings): Partial<UiSettings> {
-  const diff: Record<string, unknown> = {};
-  for (const axis of AXES) {
-    if (settings[axis.key] !== DEFAULT_SETTINGS[axis.key]) diff[axis.key] = settings[axis.key];
+/**
+ * Migrates first-release storage. That release always saved every value, so only the
+ * values a visitor actually changed from the old defaults are carried over to the new
+ * defaults; untouched settings pick up the new look.
+ */
+export function migrateLegacySettings(raw: string | null): UiSettings {
+  if (!raw) return DEFAULT_SETTINGS;
+  try {
+    const legacyDefaults: UiSettings = { ...LEGACY_V1_BASE, effects: LEGACY_V1_EFFECTS };
+    const legacy = mergeSettings(legacyDefaults, JSON.parse(raw));
+    return mergeSettings(DEFAULT_SETTINGS, diffSettings(legacy, legacyDefaults));
+  } catch {
+    return DEFAULT_SETTINGS;
   }
-  const effects: Partial<SoundEffects> = {};
-  for (const { id } of SOUND_EVENTS) {
-    if (settings.effects[id] !== DEFAULT_SETTINGS.effects[id]) effects[id] = settings.effects[id];
-  }
-  if (Object.keys(effects).length > 0) diff.effects = effects;
-  return diff as Partial<UiSettings>;
 }
 
 export const SHARE_HASH_PREFIX = '#ui=';
+export const SHARE_VERSION = 2;
 
-/** Encodes settings for a URL hash, e.g. `#ui=%7B%22palette%22%3A%22ares%22%7D`. */
+/** Encodes settings for a URL hash, e.g. `#ui=%7B%22v%22%3A2%2C%22palette%22%3A%22ares%22%7D`. */
 export function encodeShareHash(settings: UiSettings): string {
-  return SHARE_HASH_PREFIX + encodeURIComponent(JSON.stringify(diffFromDefaults(settings)));
+  return (
+    SHARE_HASH_PREFIX +
+    encodeURIComponent(JSON.stringify({ v: SHARE_VERSION, ...diffFromDefaults(settings) }))
+  );
 }
 
-/** Decodes a `#ui=` hash; returns `null` when the hash carries no settings. */
+/**
+ * Decodes a `#ui=` hash; returns `null` when the hash carries no settings. Links without
+ * a version come from the first release and are read against its defaults, so they keep
+ * showing the look that was shared.
+ */
 export function decodeShareHash(hash: string): UiSettings | null {
   if (!hash.startsWith(SHARE_HASH_PREFIX)) return null;
   try {
-    return mergeSettings(
-      DEFAULT_SETTINGS,
-      JSON.parse(decodeURIComponent(hash.slice(SHARE_HASH_PREFIX.length)))
-    );
+    const raw: unknown = JSON.parse(decodeURIComponent(hash.slice(SHARE_HASH_PREFIX.length)));
+    if (!raw || typeof raw !== 'object') return null;
+    const versioned = (raw as { v?: unknown }).v === SHARE_VERSION;
+    return mergeSettings(versioned ? DEFAULT_SETTINGS : LEGACY_V1_BASE, raw);
   } catch {
     return null;
   }
@@ -686,27 +1128,41 @@ export interface Preset {
   settings: UiSettings;
 }
 
+type PresetOverrides = Partial<Omit<UiSettings, 'effects'>> & { effects?: Partial<SoundEffects> };
+
+/** Reference presets are composed over the first-release look they were designed on. */
 const preset = (
   id: string,
   label: string,
   description: string,
   sources: readonly ReferenceId[],
-  overrides: Partial<Omit<UiSettings, 'effects'>> & { effects?: Partial<SoundEffects> }
+  overrides: PresetOverrides,
+  base: UiSettings = LEGACY_V1_BASE
 ): Preset => ({
   id,
   label,
   description,
   sources,
   settings: {
-    ...DEFAULT_SETTINGS,
+    ...base,
     ...overrides,
-    effects: { ...DEFAULT_SETTINGS.effects, ...overrides.effects },
+    effects: { ...base.effects, ...overrides.effects },
   },
 });
 
 /** Complete looks assembled from each reference, as starting points for experiments. */
 export const PRESETS: readonly Preset[] = [
-  preset('mission', 'Mission control', 'The original dashboard.', [], {}),
+  preset(
+    'poseidon',
+    'Poseidon',
+    'The default look: Poseidon blue HUD over a horizon grid with typed Orbitron titles.',
+    ['gridcn', 'soulextractSource'],
+    {},
+    DEFAULT_SETTINGS
+  ),
+  preset('mission', 'Mission control', 'The original dashboard.', [], {
+    effects: LEGACY_V1_EFFECTS,
+  }),
   preset(
     'grid',
     'The Grid',
@@ -719,6 +1175,7 @@ export const PRESETS: readonly Preset[] = [
       cornerSize: 20,
       font: 'mono',
       background: 'perspective-grid',
+      backdropGradient: 'horizon',
       scanlines: 'light',
       scanSweep: true,
       statusBar: true,
@@ -726,6 +1183,9 @@ export const PRESETS: readonly Preset[] = [
       meter: 'segmented',
       chartStyle: 'glow',
       chartGrid: 'dashed',
+      tableStyle: 'grid',
+      scrollbarStyle: 'rail',
+      hoverEffect: 'sweep',
       entrance: 'scan',
       stagger: true,
     }
@@ -741,10 +1201,13 @@ export const PRESETS: readonly Preset[] = [
       frame: 'hud',
       font: 'mono',
       background: 'square-grid',
+      backdropGradient: 'abyss',
       statusBar: true,
       meter: 'ring',
       chartStyle: 'area',
       chartGrid: 'dashed',
+      tableStyle: 'grid',
+      scrollbarStyle: 'rail',
       entrance: 'scan',
       stagger: true,
     }
@@ -760,13 +1223,17 @@ export const PRESETS: readonly Preset[] = [
       frame: 'kranox',
       cornerSize: 16,
       surface: 'glass',
+      surfaceOpacity: 70,
       font: 'electrolize',
       textEffect: 'decipher',
       background: 'moving-lines',
+      backdropGradient: 'deep-space',
       illuminator: true,
+      cursor: 'reticle',
+      hoverEffect: 'glow',
       entrance: 'assemble',
       stagger: true,
-      effects: { open: 'expand', type: 'typing' },
+      effects: { open: ['zephyr'], close: ['vapor'], type: ['mica'] },
     }
   ),
   preset(
@@ -781,9 +1248,10 @@ export const PRESETS: readonly Preset[] = [
       font: 'orbitron',
       textEffect: 'sequence',
       background: 'circuit',
+      backdropGradient: 'deep-space',
       entrance: 'fade',
       stagger: true,
-      effects: { open: 'expand', type: 'typing', intro: 'deploy' },
+      effects: { open: ['zephyr'], type: ['mica'], intro: ['nova'] },
     }
   ),
   preset(
@@ -796,18 +1264,20 @@ export const PRESETS: readonly Preset[] = [
       glow: 'medium',
       frame: 'corners',
       cornerSize: 12,
-      surface: 'glass',
+      surface: 'frosted',
+      surfaceOpacity: 60,
       font: 'electrolize',
       headingCase: 'normal',
       textEffect: 'glitch',
       background: 'nebula',
+      backdropGradient: 'nebula',
       scanlines: 'medium',
       vignette: true,
       flicker: true,
       noise: true,
       intro: 'transmission',
       entrance: 'flicker',
-      effects: { activate: 'static', open: 'transmit' },
+      effects: { activate: ['ember', 'cinder'], open: ['comet'] },
     }
   ),
   preset(
@@ -825,9 +1295,67 @@ export const PRESETS: readonly Preset[] = [
       meter: 'segmented',
       chartStyle: 'step',
       chartGrid: 'dots',
+      tableStyle: 'terminal',
+      scrollbarStyle: 'block',
       statusBar: true,
       entrance: 'scan',
-      effects: { type: 'typing' },
+      effects: { type: ['mica'], select: ['sonar'] },
+    }
+  ),
+  preset(
+    'foundry',
+    'Foundry',
+    'Brushed-steel panels and brass meters under a synth sunset.',
+    [],
+    {
+      palette: 'amber',
+      glow: 'light',
+      frame: 'octagon',
+      cornerSize: 12,
+      borderWidth: 1.5,
+      surface: 'steel',
+      panelShadow: 'deep',
+      font: 'chakra',
+      background: 'perspective-grid',
+      backdropGradient: 'sunset',
+      meter: 'segmented',
+      chartStyle: 'area',
+      tableStyle: 'zebra',
+      scrollbarStyle: 'rail',
+      hoverEffect: 'lift',
+      entrance: 'fade',
+      effects: { activate: ['tungsten', 'relay'], hover: ['basalt'], toggle: ['relay'] },
+    }
+  ),
+  preset(
+    'study',
+    'Study',
+    'Walnut panels, warm light and soft wooden sounds.',
+    [],
+    {
+      palette: 'athena',
+      glow: 'none',
+      frame: 'plain',
+      cornerSize: 8,
+      surface: 'wood',
+      panelShadow: 'soft',
+      font: 'system',
+      headingCase: 'normal',
+      background: 'stars',
+      backdropGradient: 'abyss',
+      backgroundIntensity: 60,
+      tableStyle: 'zebra',
+      hoverEffect: 'lift',
+      entrance: 'fade',
+      reverb: 35,
+      effects: {
+        hover: ['opal'],
+        activate: ['basalt', 'opal'],
+        toggle: ['basalt'],
+        select: ['opal'],
+        open: ['vesper'],
+        close: ['drift'],
+      },
     }
   ),
   preset(
@@ -841,6 +1369,7 @@ export const PRESETS: readonly Preset[] = [
       frame: 'plain',
       surface: 'solid',
       backgroundIntensity: 40,
+      backgroundSpeed: 50,
       chartGrid: 'dots',
       entrance: 'fade',
       sound: false,
@@ -880,7 +1409,7 @@ export function countCustomized(settings: UiSettings): number {
 }
 
 /** Axes that the randomizer leaves alone so experiments stay comfortable. */
-const RANDOMIZER_LOCKED = new Set<ScalarKey>(['animations', 'sound', 'volume', 'intro']);
+const RANDOMIZER_LOCKED = new Set<ScalarKey>(['animations', 'intro', 'cursor']);
 
 /** Random combination of every visual axis — a quick way to explore the space. */
 export function randomizeSettings(current: UiSettings, random: () => number = Math.random): UiSettings {
@@ -888,7 +1417,7 @@ export function randomizeSettings(current: UiSettings, random: () => number = Ma
   const writable = next as unknown as Record<string, unknown>;
   const pick = <T>(items: readonly T[]) => items[Math.floor(random() * items.length) % items.length];
   for (const axis of AXES) {
-    if (RANDOMIZER_LOCKED.has(axis.key)) continue;
+    if (RANDOMIZER_LOCKED.has(axis.key) || axis.group === 'audio') continue;
     if (axis.kind === 'choice') writable[axis.key] = pick(axis.options).id;
     else if (axis.kind === 'toggle') writable[axis.key] = random() < 0.5;
     else {

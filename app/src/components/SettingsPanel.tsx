@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import {
   AXES,
   PRESETS,
   REFERENCES,
   SETTING_GROUPS,
+  MAX_SOUNDS_PER_EVENT,
   SOUND_EVENTS,
-  SOUND_PRESETS,
+  SOUNDS,
   applyPreset,
   countCustomized,
   encodeShareHash,
@@ -15,10 +16,16 @@ import {
   type ReferenceId,
   type SettingGroupId,
   type SoundEventId,
-  type SoundPresetId,
+  type SoundId,
   type UiSettings,
 } from '../settings';
 import { sounds } from '../sound';
+import { Select } from './Select';
+
+const SOUND_BY_ID = Object.fromEntries(SOUNDS.map((sound) => [sound.id, sound])) as Record<
+  SoundId,
+  (typeof SOUNDS)[number]
+>;
 
 interface SettingsPanelProps {
   open: boolean;
@@ -65,7 +72,7 @@ function AxisControl({
           onPointerEnter={() => sounds.hover()}
           onClick={() => {
             set(!value);
-            sounds.click();
+            sounds.toggle();
           }}
         >
           <span>
@@ -96,6 +103,11 @@ function AxisControl({
           max={axis.max}
           step={axis.step}
           value={Number(value)}
+          style={
+            {
+              '--fill': `${((Number(value) - axis.min) / (axis.max - axis.min)) * 100}%`,
+            } as CSSProperties
+          }
           onChange={(event) => set(Number(event.target.value))}
           onPointerUp={() => sounds.select()}
         />
@@ -110,7 +122,11 @@ function AxisControl({
     return (
       <fieldset className="axis axis--choice">
         <legend>{axis.label}</legend>
-        <div className={axis.key === 'palette' ? 'palette-options' : 'choice-options'}>
+        <div
+          className={
+            axis.key === 'palette' || axis.key === 'surface' ? 'palette-options' : 'choice-options'
+          }
+        >
           {axis.options.map((option) => (
             <button
               key={option.id}
@@ -121,7 +137,7 @@ function AxisControl({
               onPointerEnter={() => sounds.hover()}
               onClick={() => {
                 set(option.id);
-                sounds.click();
+                sounds.select();
               }}
             >
               {axis.key === 'palette' && (
@@ -129,6 +145,9 @@ function AxisControl({
                   className={`palette-swatch palette-swatch--${option.id}`}
                   aria-hidden="true"
                 />
+              )}
+              {axis.key === 'surface' && (
+                <span className="material-swatch" data-material={option.id} aria-hidden="true" />
               )}
               {option.label}
             </button>
@@ -145,21 +164,12 @@ function AxisControl({
       <label className="select-label" htmlFor={id}>
         {axis.label}
       </label>
-      <select
+      <Select
         id={id}
         value={String(value)}
-        onPointerEnter={() => sounds.hover()}
-        onChange={(event) => {
-          set(event.target.value);
-          sounds.select();
-        }}
-      >
-        {axis.options.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+        options={axis.options}
+        onChange={(next) => set(next)}
+      />
       {current?.description && <p className="settings-note">{current.description}</p>}
       <SourceLinks
         sources={current?.source ? [current.source, ...(axis.sources ?? [])] : axis.sources}
@@ -204,22 +214,21 @@ export function SettingsPanel({
 
   const customized = countCustomized(settings);
 
-  const updateEffect = (event: SoundEventId, preset: SoundPresetId) => {
-    onChange({ ...settings, effects: { ...settings.effects, [event]: preset } });
-    sounds.preview(preset);
-  };
+  const setEffect = (event: SoundEventId, list: readonly SoundId[]) =>
+    onChange({ ...settings, effects: { ...settings.effects, [event]: list } });
 
   const share = async () => {
     const url = `${window.location.origin}${window.location.pathname}${window.location.search}${encodeShareHash(settings)}`;
     try {
       await navigator.clipboard.writeText(url);
       setShareStatus('Share link copied to the clipboard.');
+      sounds.notify();
     } catch {
       // Clipboard can be blocked (insecure origin, permissions); expose the link in the URL instead.
       window.history.replaceState(null, '', url);
       setShareStatus('Clipboard unavailable — the share link is now in the address bar.');
+      sounds.notify();
     }
-    sounds.select();
   };
 
   const tabId = (id: SettingGroupId) => `settings-tab-${id}`;
@@ -232,6 +241,7 @@ export function SettingsPanel({
       aria-modal="false"
       aria-labelledby="settings-title"
     >
+      <span className="frame-material" aria-hidden="true" />
       <span className="corner" aria-hidden="true" />
       <header className="settings-header">
         <div>
@@ -248,6 +258,7 @@ export function SettingsPanel({
           type="button"
           className="icon-button"
           aria-label="Close settings"
+          onPointerEnter={() => sounds.hover()}
           onClick={onClose}
         >
           ×
@@ -280,7 +291,7 @@ export function SettingsPanel({
             className="secondary-button"
             onClick={() => {
               onChange(randomizeSettings(settings));
-              sounds.select();
+              sounds.click();
             }}
           >
             ⚄ Randomize
@@ -314,7 +325,7 @@ export function SettingsPanel({
             tabIndex={group === id ? 0 : -1}
             onClick={() => {
               setGroup(id);
-              sounds.click();
+              sounds.select();
             }}
             onKeyDown={(event) => {
               if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
@@ -355,38 +366,100 @@ export function SettingsPanel({
           <fieldset className="sound-map">
             <legend>Audio effect map</legend>
             <p className="settings-note">
-              Every interaction can use a different synthesized cue. Sound starts after the first
+              Map up to {MAX_SOUNDS_PER_EVENT} sounds to every interaction; the playback mode
+              above decides whether they rotate, randomize or layer. Sound starts after the first
               browser interaction.
             </p>
             {SOUND_EVENTS.map((soundEvent) => {
-              const preset = SOUND_PRESETS.find(({ id }) => id === settings.effects[soundEvent.id])!;
+              const list = settings.effects[soundEvent.id];
+              const available = SOUNDS.filter((sound) => !list.includes(sound.id));
+              const full = list.length >= MAX_SOUNDS_PER_EVENT;
               return (
                 <div className="sound-row" key={soundEvent.id}>
-                  <label htmlFor={`sound-${soundEvent.id}`}>{soundEvent.label}</label>
-                  <select
-                    id={`sound-${soundEvent.id}`}
-                    value={preset.id}
-                    disabled={!settings.sound}
-                    onChange={(event) =>
-                      updateEffect(soundEvent.id, event.target.value as SoundPresetId)
-                    }
-                  >
-                    {SOUND_PRESETS.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
+                  <span className="sound-row-label" id={`sound-${soundEvent.id}-label`}>
+                    {soundEvent.label}
+                  </span>
+                  <ul className="sound-chips" aria-labelledby={`sound-${soundEvent.id}-label`}>
+                    {list.length === 0 && <li className="sound-chip sound-chip--empty">Silent</li>}
+                    {list.map((soundId) => (
+                      <li className="sound-chip" key={soundId}>
+                        <button
+                          type="button"
+                          className="sound-chip-play"
+                          title={SOUND_BY_ID[soundId].character}
+                          aria-label={`Preview ${SOUND_BY_ID[soundId].label}`}
+                          disabled={!settings.sound}
+                          onClick={() => sounds.preview(soundId)}
+                        >
+                          ▶ {SOUND_BY_ID[soundId].label}
+                        </button>
+                        <button
+                          type="button"
+                          className="sound-chip-remove"
+                          aria-label={`Remove ${SOUND_BY_ID[soundId].label} from ${soundEvent.label}`}
+                          onClick={() => {
+                            setEffect(
+                              soundEvent.id,
+                              list.filter((id) => id !== soundId),
+                            );
+                            sounds.close();
+                          }}
+                        >
+                          ×
+                        </button>
+                      </li>
                     ))}
-                  </select>
-                  {preset.sourceUrl ? (
-                    <a href={preset.sourceUrl} target="_blank" rel="noreferrer">
-                      {preset.sourceLabel} ↗
-                    </a>
-                  ) : (
-                    <span className="source-placeholder">No sound</span>
-                  )}
+                  </ul>
+                  <Select
+                    className="sound-add"
+                    ariaLabel={`Add a sound to ${soundEvent.label}`}
+                    value=""
+                    placeholder={full ? `Maximum ${MAX_SOUNDS_PER_EVENT} sounds` : '+ Add sound'}
+                    disabled={!settings.sound || full}
+                    options={available.map((sound) => ({
+                      id: sound.id,
+                      label: sound.label,
+                      description: sound.character,
+                    }))}
+                    onChange={(soundId) => {
+                      setEffect(soundEvent.id, [...list, soundId]);
+                      sounds.preview(soundId);
+                    }}
+                  />
                 </div>
               );
             })}
+          </fieldset>
+        )}
+
+        {group === 'audio' && (
+          <fieldset className="sound-library">
+            <legend>Sound library</legend>
+            <p className="settings-note">
+              Every sound is synthesized in the browser with the Web Audio API (oscillators, FM,
+              filtered noise and a convolution room) after the cited references.
+            </p>
+            <ul>
+              {SOUNDS.map((sound) => (
+                <li key={sound.id}>
+                  <button
+                    type="button"
+                    className="sound-chip-play"
+                    aria-label={`Preview ${sound.label}`}
+                    disabled={!settings.sound}
+                    onPointerEnter={() => sounds.hover()}
+                    onClick={() => sounds.preview(sound.id)}
+                  >
+                    ▶
+                  </button>
+                  <span className="sound-library-name">{sound.label}</span>
+                  <span className="sound-library-character">{sound.character}</span>
+                  <a href={sound.sourceUrl} target="_blank" rel="noreferrer">
+                    {sound.sourceLabel} ↗
+                  </a>
+                </li>
+              ))}
+            </ul>
           </fieldset>
         )}
       </div>
